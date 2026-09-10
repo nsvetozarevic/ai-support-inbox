@@ -1,0 +1,13 @@
+/ai_agent
+.DS_Store
+.env
+.env.backup
+.env.production
+/vendor
+/node_modules
+/.idea
+/.cursor/*
+!/.cursor/rules/
+!/.cursor/rules/**
+.phpunit.result.cache
+.php-cs-fixer.cache
