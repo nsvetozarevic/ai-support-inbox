@@ -8,7 +8,11 @@
         @vite(['resources/css/app.css', 'resources/js/app.js'])
     </head>
     <body class="min-h-screen bg-zinc-50 font-sans text-zinc-900 antialiased">
-        <main class="mx-auto max-w-lg px-4 py-12">
+        <header class="mx-auto flex max-w-2xl gap-4 px-4 pt-8 text-sm">
+            <a href="{{ route(\App\Routing\WebRoute::CreateTicket) }}" class="text-zinc-600 hover:text-zinc-900">Contact</a>
+            <a href="{{ route(\App\Routing\WebRoute::IndexTickets) }}" class="text-zinc-600 hover:text-zinc-900">Inbox</a>
+        </header>
+        <main class="mx-auto max-w-2xl px-4 py-12">
             @yield('content')
         </main>
     </body>
