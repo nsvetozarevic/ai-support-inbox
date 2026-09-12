@@ -13,10 +13,7 @@ class StoreTicketController extends Controller
 {
     public function __invoke(StoreTicketRequest $request): RedirectResponse
     {
-        Ticket::query()->create([
-            ...$request->safe()->only(['name', 'email', 'message']),
-            'status' => 'new',
-        ]);
+        Ticket::query()->create($request->safe()->only(['name', 'email', 'message']));
 
         return redirect()->route(WebRoute::ShowTicketCreated);
     }

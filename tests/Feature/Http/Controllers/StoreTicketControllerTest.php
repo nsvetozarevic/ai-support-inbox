@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Http\Controllers;
 
+use App\Enums\TicketStatus;
 use App\Models\Ticket;
 use App\Routing\WebRoute;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -28,7 +29,7 @@ class StoreTicketControllerTest extends TestCase
         $this->assertSame('Ada Lovelace', $ticket->name);
         $this->assertSame('ada@example.com', $ticket->email);
         $this->assertSame('Where is my order #1001?', $ticket->message);
-        $this->assertSame('new', $ticket->status);
+        $this->assertSame(TicketStatus::New, $ticket->status);
     }
 
     /**

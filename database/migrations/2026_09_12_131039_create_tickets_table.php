@@ -18,16 +18,9 @@ return new class extends Migration
             $table->string('name');
             $table->string('email');
             $table->text('message');
+            $table->text('reply')->nullable();
             $table->string('status')->default('new');
             $table->timestamps();
         });
-    }
-
-    /**
-     * Reverse the migrations.
-     */
-    public function down(): void
-    {
-        Schema::dropIfExists('tickets');
     }
 };

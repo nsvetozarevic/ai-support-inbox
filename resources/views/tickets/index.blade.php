@@ -9,8 +9,12 @@
     @forelse ($tickets as $ticket)
         <article class="mt-6 rounded-md border border-zinc-200 bg-white px-4 py-3">
             <div class="flex items-baseline justify-between gap-3">
-                <h2 class="text-sm font-medium">{{ $ticket->name }}</h2>
-                <p class="text-xs text-zinc-500">{{ $ticket->status }}</p>
+                <h2 class="text-sm font-medium">
+                    <a href="{{ route(\App\Routing\WebRoute::ShowTicket, $ticket) }}" class="hover:underline">
+                        {{ $ticket->name }}
+                    </a>
+                </h2>
+                <p class="text-xs text-zinc-500">{{ $ticket->status->value }}</p>
             </div>
             <p class="mt-1 text-sm text-zinc-600">{{ $ticket->email }}</p>
             <p class="mt-3 text-sm whitespace-pre-wrap">{{ $ticket->message }}</p>

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Database\Factories;
 
+use App\Enums\TicketStatus;
 use App\Models\Ticket;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
@@ -21,7 +22,23 @@ class TicketFactory extends Factory
             'name' => fake()->name(),
             'email' => fake()->safeEmail(),
             'message' => fake()->paragraph(),
-            'status' => 'new',
+            'reply' => null,
+            'status' => TicketStatus::New,
         ];
+    }
+
+    public function sent(): static
+    {
+        return $this->state(fn (array $attributes): array => [
+            'reply' => fake()->paragraph(),
+            'status' => TicketStatus::Sent,
+        ]);
+    }
+
+    public function discarded(): static
+    {
+        return $this->state(fn (array $attributes): array => [
+            'status' => TicketStatus::Discarded,
+        ]);
     }
 }
