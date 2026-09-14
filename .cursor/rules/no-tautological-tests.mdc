@@ -1,0 +1,18 @@
+---
+description: Keep real test coverage; skip tautological tests (seeders, factory definitions, asserting a call the test just made). Ask if unsure.
+alwaysApply: true
+---
+
+# Test coverage without tautology
+
+Write tests for **application contracts**: HTTP (status, validation, authz, redirects), persisted state, mail/queue side effects, PHP validation of model output, jobs/actions that call an agent.
+
+Do **not** add tests that cannot fail unless the test itself is wrong:
+
+- Seeders, fixture data, and Eloquent factory definitions (e.g. `HandbookPageSeeder`, `test_factory_creates_a_ticket_with_a_name`). Use the factory inside a feature test to arrange data; do not test that `definition()` returns what you typed.
+- Asserting a method was invoked when the same test just invoked it. `TicketTriage::assertPrompted($x)` after `(new TicketTriage)->prompt($x)` is circular. `assertPrompted` belongs on the **caller** (job/action) when that code is under test.
+- Framework behaviour (Eloquent `create`, `fake()` returning the array you passed) unless this project configured something extra.
+
+Still fake outbound AI. Still assert the **result** that matters (`$response['intent']`, ticket column, no mail until Send).
+
+If a test looks optional or you are about to skip coverage, **ask** before writing or omitting it.

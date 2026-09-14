@@ -4,7 +4,11 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Http\Controllers;
 
+use App\Ai\Agents\TicketTriage;
+use App\Enums\AiPromptLogStatus;
+use App\Enums\TicketIntent;
 use App\Enums\TicketStatus;
+use App\Models\AiPromptLog;
 use App\Models\Ticket;
 use App\Routing\WebRoute;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -17,6 +21,10 @@ class StoreTicketControllerTest extends TestCase
 
     public function test_valid_submission_creates_a_new_ticket(): void
     {
+        TicketTriage::fake([
+            ['intent' => TicketIntent::Shipping->value],
+        ])->preventStrayPrompts();
+
         $this->post(route(WebRoute::StoreTicket), [
             'name' => 'Ada Lovelace',
             'email' => 'ada@example.com',
@@ -30,6 +38,36 @@ class StoreTicketControllerTest extends TestCase
         $this->assertSame('ada@example.com', $ticket->email);
         $this->assertSame('Where is my order #1001?', $ticket->message);
         $this->assertSame(TicketStatus::New, $ticket->status);
+        $this->assertSame(TicketIntent::Shipping, $ticket->intent);
+        TicketTriage::assertPrompted('Where is my order #1001?');
+
+        $log = AiPromptLog::query()->sole();
+        $this->assertSame(TicketTriage::class, $log->agent);
+        $this->assertSame((string) (new TicketTriage)->instructions(), $log->instructions);
+        $this->assertSame('Where is my order #1001?', $log->input);
+        $this->assertSame(['intent' => TicketIntent::Shipping->value], $log->response);
+        $this->assertSame(AiPromptLogStatus::Accepted, $log->status);
+    }
+
+    public function test_invalid_model_intent_is_not_stored(): void
+    {
+        TicketTriage::fake([
+            ['intent' => 'not-an-intent'],
+        ])->preventStrayPrompts();
+
+        $this->post(route(WebRoute::StoreTicket), [
+            'name' => 'Ada Lovelace',
+            'email' => 'ada@example.com',
+            'message' => 'Where is my order #1001?',
+        ])
+            ->assertRedirect(route(WebRoute::ShowTicketCreated));
+
+        $this->assertNull(Ticket::query()->sole()->intent);
+
+        $log = AiPromptLog::query()->sole();
+        $this->assertSame('Where is my order #1001?', $log->input);
+        $this->assertSame(['intent' => 'not-an-intent'], $log->response);
+        $this->assertSame(AiPromptLogStatus::Invalid, $log->status);
     }
 
     /**

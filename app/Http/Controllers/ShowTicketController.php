@@ -12,7 +12,9 @@ class ShowTicketController extends Controller
     public function __invoke(Ticket $ticket): View
     {
         return view('tickets.show', [
-            'ticket' => $ticket,
+            'ticket' => $ticket->load([
+                'aiPromptLogs' => fn ($query) => $query->latest(),
+            ]),
         ]);
     }
 }

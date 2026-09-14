@@ -19,6 +19,7 @@ return new class extends Migration
             $table->string('email');
             $table->text('message');
             $table->text('reply')->nullable();
+            $table->string('intent')->nullable();
             $table->string('status')->default('new');
             $table->timestamps();
         });

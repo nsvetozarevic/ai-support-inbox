@@ -8,7 +8,13 @@
     </p>
 
     <h1 class="mt-6 text-2xl font-semibold tracking-tight">{{ $ticket->name }}</h1>
-    <p class="mt-1 text-sm text-zinc-600">{{ $ticket->email }} · {{ $ticket->status->value }}</p>
+    <p class="mt-1 text-sm text-zinc-600">
+        {{ $ticket->email }}
+        · {{ $ticket->status->value }}
+        @if ($ticket->intent)
+            · {{ $ticket->intent->value }}
+        @endif
+    </p>
     <p class="mt-6 text-sm whitespace-pre-wrap">{{ $ticket->message }}</p>
 
     @if ($ticket->isOpen())
@@ -45,4 +51,36 @@
             <p class="mt-2 text-sm whitespace-pre-wrap">{{ $ticket->reply }}</p>
         </div>
     @endif
+
+    <section class="mt-10 space-y-4">
+        <h2 class="text-sm font-medium uppercase tracking-wide text-zinc-500">Model log</h2>
+
+        @forelse ($ticket->aiPromptLogs as $log)
+            <div class="rounded-md border border-zinc-200 bg-white px-4 py-3 space-y-3">
+                <p class="text-xs text-zinc-500">
+                    {{ $log->status->value }}
+                    · {{ class_basename($log->agent) }}
+                </p>
+                <div>
+                    <p class="text-xs font-medium uppercase tracking-wide text-zinc-500">Instructions</p>
+                    <p class="mt-1 text-sm whitespace-pre-wrap">{{ $log->instructions }}</p>
+                </div>
+                <div>
+                    <p class="text-xs font-medium uppercase tracking-wide text-zinc-500">Input</p>
+                    <p class="mt-1 text-sm whitespace-pre-wrap">{{ $log->input }}</p>
+                </div>
+                @if ($log->response)
+                    <div>
+                        <p class="text-xs font-medium uppercase tracking-wide text-zinc-500">Response</p>
+                        <p class="mt-1 text-sm whitespace-pre-wrap">{{ json_encode($log->response, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) }}</p>
+                    </div>
+                @endif
+                @if ($log->error)
+                    <p class="text-sm text-red-700">{{ $log->error }}</p>
+                @endif
+            </div>
+        @empty
+            <p class="text-sm text-zinc-600">No model calls yet.</p>
+        @endforelse
+    </section>
 @endsection
