@@ -8,17 +8,17 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
-        Schema::create('handbook_pages', function (Blueprint $table) {
+        Schema::create('handbook_chunks', function (Blueprint $table) {
             $table->id();
-            $table->string('title');
-            $table->string('slug')->unique();
+            $table->foreignId('handbook_document_id')->constrained()->cascadeOnDelete();
+            $table->string('key')->unique();
+            $table->unsignedInteger('position');
             $table->text('body');
             $table->timestamps();
+
+            $table->unique(['handbook_document_id', 'position']);
         });
     }
 };

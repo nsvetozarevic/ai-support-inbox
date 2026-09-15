@@ -16,7 +16,7 @@ Track what is in, what is out, and where we are. Update checkboxes as we land ea
 - [x] Queue worker, job retries for triage (`$tries` / `$maxExceptions`, backoff)
 - [x] `TicketTriage` agent + `TicketTriageClient` + `TriageTicket` job
 - [x] `AiPromptLog` on the show page
-- [x] Handbook pages table + short seeder (unused by retrieval)
+- [x] Handbook documents table + short seeder (unused by retrieval)
 - [x] Compose Postgres with pgvector (unused by app code)
 
 ### Next (in order)

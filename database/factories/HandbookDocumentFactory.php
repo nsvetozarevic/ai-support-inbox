@@ -4,13 +4,13 @@ declare(strict_types=1);
 
 namespace Database\Factories;
 
-use App\Models\HandbookPage;
+use App\Models\HandbookDocument;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * @extends Factory<HandbookPage>
+ * @extends Factory<HandbookDocument>
  */
-class HandbookPageFactory extends Factory
+class HandbookDocumentFactory extends Factory
 {
     /**
      * @return array<string, mixed>

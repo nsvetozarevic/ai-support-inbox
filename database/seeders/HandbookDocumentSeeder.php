@@ -4,22 +4,22 @@ declare(strict_types=1);
 
 namespace Database\Seeders;
 
-use App\Models\HandbookPage;
+use App\Models\HandbookDocument;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 
-class HandbookPageSeeder extends Seeder
+class HandbookDocumentSeeder extends Seeder
 {
     use WithoutModelEvents;
 
     public function run(): void
     {
-        foreach ($this->pages() as $page) {
-            HandbookPage::query()->updateOrCreate(
-                ['slug' => $page['slug']],
+        foreach ($this->documents() as $document) {
+            HandbookDocument::query()->updateOrCreate(
+                ['slug' => $document['slug']],
                 [
-                    'title' => $page['title'],
-                    'body' => $page['body'],
+                    'title' => $document['title'],
+                    'body' => $document['body'],
                 ],
             );
         }
@@ -28,7 +28,7 @@ class HandbookPageSeeder extends Seeder
     /**
      * @return list<array{title: string, slug: string, body: string}>
      */
-    private function pages(): array
+    private function documents(): array
     {
         return [
             [
