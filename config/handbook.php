@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 return [
 
+    'catalog' => database_path('assets/handbook-documents.php'),
+
     /*
     | Characters, not tokens. lid is target + window (not configurable).
     */

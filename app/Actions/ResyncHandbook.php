@@ -5,20 +5,24 @@ declare(strict_types=1);
 namespace App\Actions;
 
 use App\Models\HandbookDocument;
+use App\Utilities\DocumentLoader;
 use App\Utilities\HandbookChunker;
 use Illuminate\Support\Facades\DB;
 
 class ResyncHandbook
 {
-    public function __construct(private HandbookChunker $chunker) {}
+    public function __construct(
+        private DocumentLoader $loader,
+        private HandbookChunker $chunker,
+    ) {}
 
     public function handle(): void
     {
-        DB::transaction(function (): void {
-            $catalog = $this->documents();
-            $slugs = array_column($catalog, 'slug');
+        $documents = $this->loader->documents();
+        $slugs = array_column($documents, 'slug');
 
-            foreach ($catalog as $document) {
+        DB::transaction(function () use ($documents, $slugs): void {
+            foreach ($documents as $document) {
                 $handbookDocument = HandbookDocument::query()->updateOrCreate(
                     ['slug' => $document['slug']],
                     [
@@ -30,19 +34,8 @@ class ResyncHandbook
                 $this->rebuildChunks($handbookDocument);
             }
 
-            $this->deleteDocumentsMissingFromCatalog($slugs);
+            $this->deleteMissingDocuments($slugs);
         });
-    }
-
-    /**
-     * @return list<array{title: string, slug: string, body: string}>
-     */
-    private function documents(): array
-    {
-        /** @var list<array{title: string, slug: string, body: string}> $documents */
-        $documents = require database_path('assets/handbook-documents.php');
-
-        return $documents;
     }
 
     private function rebuildChunks(HandbookDocument $document): void
@@ -61,7 +54,7 @@ class ResyncHandbook
     /**
      * @param  list<string>  $slugs
      */
-    private function deleteDocumentsMissingFromCatalog(array $slugs): void
+    private function deleteMissingDocuments(array $slugs): void
     {
         if ($slugs === []) {
             HandbookDocument::query()->delete();

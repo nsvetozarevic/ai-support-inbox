@@ -68,6 +68,17 @@ class HandbookChunkerTest extends TestCase
         $this->assertSame($sentence, $chunks[0]);
     }
 
+    public function test_second_chunk_starts_with_the_overlap_from_the_first_chunk(): void
+    {
+        $text = str_repeat('x', 55)."\n\n".str_repeat('y', 80);
+
+        $chunks = (new HandbookChunker($this->chunking(overlap: 10)))->split($text);
+
+        $this->assertArrayHasKey(1, $chunks);
+        $this->assertSame(str_repeat('x', 55), $chunks[0]);
+        $this->assertSame(str_repeat('x', 10), mb_substr($chunks[1], 0, 10));
+    }
+
     public function test_rejects_a_target_that_is_not_greater_than_the_window(): void
     {
         $this->expectException(InvalidArgumentException::class);
