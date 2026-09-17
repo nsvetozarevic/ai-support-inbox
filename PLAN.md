@@ -16,15 +16,16 @@ Track what is in, what is out, and where we are. Update checkboxes as we land ea
 - [x] Queue worker, job retries for triage (`$tries` / `$maxExceptions`, backoff)
 - [x] `TicketTriage` agent + `TicketTriageClient` + `TriageTicket` job
 - [x] `AiPromptLog` on the show page
-- [x] Handbook documents table + short seeder (unused by retrieval)
+- [x] Handbook documents table + seeder (longer policy text)
 - [x] Compose Postgres with pgvector (unused by app code)
+- [x] Chunker (two-way window + lid). See `CHUNKING.md`
 
 ### Next (in order)
 
-- [ ] Grow the handbook and split into chunks (stable ids; no model call yet)
-- [ ] Embed + store (`vector` column, HNSW, `AsVector`). Reindex artisan command
+- [x] Grow the handbook and split into chunks (`handbook:resync`; no model call yet). Document identity is slug. Chunks are rebuilt on each resync — not stable ids.
+- [ ] Embed + store (`vector` column, HNSW, `AsVector`) on the existing `handbook:resync` path
 - [ ] Hybrid retriever (full-text ∪ vectors → RRF). Golden tests: ticket text → expected slugs
-- [ ] Rerank top candidates; log chunk ids on the prompt log
+- [ ] Rerank top candidates; log the chunk rows used on that prompt (ids are for that run)
 - [ ] Draft agent + client + job: retrieved text in, PHP grounding, write `reply` only if empty/valid. Prefill show page. Chain after triage
 - [ ] Shared circuit breaker around every provider call
 - [ ] Real README + real keys (`OPENAI_API_KEY`, `COHERE_API_KEY` if we rerank)
@@ -34,9 +35,9 @@ Track what is in, what is out, and where we are. Update checkboxes as we land ea
 ## In (not a hello-world RAG)
 
 - Bigger handbook, **chunked**. Store embedding model + dimensions on the row
-- **Reindex** command when pages change
+- **`handbook:resync`** when pages change: upsert documents by slug, rebuild that page’s chunks, delete slugs the catalog dropped. Chunk row ids are not stable
 - **Hybrid + RRF + rerank**, owned in Postgres. No OpenAI vector stores, no Scout
-- **Retrieval trace** on `AiPromptLog` (chunk ids that went into the prompt)
+- **Retrieval trace** on `AiPromptLog` (chunk ids used for *that* prompt, not forever citations)
 - **PHP grounding:** draft may only assert policy that appears in retrieved chunk text; otherwise `Invalid`, do not fill `reply`
 - Empty retrieval → no invented policy (ask for order number / refuse to draft)
 - Do not overwrite a reply staff already edited
