@@ -6,11 +6,12 @@ namespace App\Models;
 
 use Database\Factories\HandbookChunkFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Casts\AsVector;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-#[Fillable(['handbook_document_id', 'key', 'position', 'body'])]
+#[Fillable(['handbook_document_id', 'key', 'position', 'body', 'embedding', 'embedding_model', 'embedding_dimensions'])]
 class HandbookChunk extends Model
 {
     /** @use HasFactory<HandbookChunkFactory> */
@@ -23,6 +24,8 @@ class HandbookChunk extends Model
     {
         return [
             'position' => 'integer',
+            'embedding' => AsVector::class,
+            'embedding_dimensions' => 'integer',
         ];
     }
 

@@ -18,6 +18,18 @@ if [ ! -f .env.docker.local ]; then
     cp .env.docker.example .env.docker.local
 fi
 
+if [ ! -f .env.testing ]; then
+    cp .env.testing.example .env.testing
+fi
+
+if [ -f .env.docker.local ] && [ -f .env.testing ] && grep -q '^APP_KEY=$' .env.testing 2>/dev/null; then
+    app_key=$(grep '^APP_KEY=' .env.docker.local | cut -d= -f2-)
+    if [ -n "$app_key" ]; then
+        sed "s|^APP_KEY=.*|APP_KEY=$app_key|" .env.testing > .env.testing.tmp
+        mv .env.testing.tmp .env.testing
+    fi
+fi
+
 ln -sf .env.docker.local .env
 
 if [ ! -f vendor/autoload.php ]; then

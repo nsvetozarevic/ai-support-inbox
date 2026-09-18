@@ -1,0 +1,62 @@
+name: Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_DB: inbox_testing
+          POSTGRES_USER: inbox
+          POSTGRES_PASSWORD: secret
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U inbox -d inbox_testing"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      APP_ENV: testing
+      APP_DEBUG: "true"
+      DB_CONNECTION: pgsql
+      DB_HOST: 127.0.0.1
+      DB_PORT: 5432
+      DB_DATABASE: inbox_testing
+      DB_USERNAME: inbox
+      DB_PASSWORD: secret
+      SESSION_DRIVER: array
+      QUEUE_CONNECTION: sync
+      CACHE_STORE: array
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.5"
+          extensions: mbstring, pdo_pgsql, pgsql, redis, bcmath, intl, pcntl, zip
+          coverage: none
+
+      - name: Install Composer dependencies
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      - name: Prepare Laravel
+        run: |
+          cp .env.example .env
+          php artisan key:generate --force
+
+      - name: Tests
+        run: php artisan test --compact
+
+      - name: Pint
+        run: vendor/bin/pint --test
