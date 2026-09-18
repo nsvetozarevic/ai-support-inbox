@@ -7,6 +7,14 @@ return [
     'catalog' => database_path('assets/handbook-documents.php'),
 
     /*
+    | Must match the handbook_chunks.embedding vector column.
+    */
+    'embeddings' => [
+        'model' => 'text-embedding-3-small',
+        'dimensions' => 1536,
+    ],
+
+    /*
     | Characters, not tokens. lid is target + window (not configurable).
     */
     'chunking' => [

@@ -9,13 +9,16 @@ use App\Models\HandbookDocument;
 use App\Models\Ticket;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Validation\ValidationException;
+use Laravel\Ai\Embeddings;
+use Laravel\Ai\Exceptions\RateLimitedException;
+use Laravel\Ai\Prompts\EmbeddingsPrompt;
 use Tests\TestCase;
 
 class ResyncHandbookCommandTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_resync_updates_handbook_pages_without_wiping_tickets(): void
+    public function test_resync_updates_handbook_documents_without_wiping_tickets(): void
     {
         $ticket = Ticket::factory()->create();
         $document = HandbookDocument::factory()->create([
@@ -30,6 +33,8 @@ class ResyncHandbookCommandTest extends TestCase
             'body' => 'stale',
         ]);
 
+        Embeddings::fake();
+
         $this->artisan('handbook:resync')->assertSuccessful();
 
         $document->refresh();
@@ -43,8 +48,14 @@ class ResyncHandbookCommandTest extends TestCase
         foreach ($chunks as $chunk) {
             $this->assertSame($document->slug.':'.$chunk->position, $chunk->key);
             $this->assertNotSame('stale', $chunk->body);
+            $this->assertIsArray($chunk->embedding);
+            $this->assertCount(1536, $chunk->embedding);
+            $this->assertSame('text-embedding-3-small', $chunk->embedding_model);
+            $this->assertSame(1536, $chunk->embedding_dimensions);
         }
+        $this->assertSame(0, HandbookChunk::query()->whereNull('embedding')->count());
         $this->assertModelExists($ticket);
+        Embeddings::assertGenerated(fn (EmbeddingsPrompt $prompt): bool => $prompt->model === 'text-embedding-3-small' && $prompt->dimensions === 1536 && $prompt->contains('14 days'));
     }
 
     public function test_resync_removes_documents_that_are_no_longer_in_the_catalog(): void
@@ -58,6 +69,8 @@ class ResyncHandbookCommandTest extends TestCase
             'position' => 0,
         ]);
 
+        Embeddings::fake();
+
         $this->artisan('handbook:resync')->assertSuccessful();
 
         $this->assertModelMissing($removed);
@@ -67,7 +80,7 @@ class ResyncHandbookCommandTest extends TestCase
         );
     }
 
-    public function test_resync_leaves_the_database_unchanged_when_a_catalog_page_is_missing_a_slug(): void
+    public function test_resync_leaves_the_database_unchanged_when_a_catalog_document_is_missing_a_slug(): void
     {
         $document = HandbookDocument::factory()->create([
             'slug' => 'kept-policy',
@@ -77,10 +90,12 @@ class ResyncHandbookCommandTest extends TestCase
 
         config(['handbook.catalog' => $this->catalogPath([
             [
-                'title' => 'Broken page',
-                'body' => 'This page has no slug.',
+                'title' => 'Broken document',
+                'body' => 'This document has no slug.',
             ],
         ])]);
+
+        Embeddings::fake()->preventStrayEmbeddings();
 
         try {
             $this->artisan('handbook:resync');
@@ -89,10 +104,40 @@ class ResyncHandbookCommandTest extends TestCase
             $this->assertArrayHasKey('documents.0.slug', $exception->errors());
         }
 
+        Embeddings::assertNothingGenerated();
+
         $document->refresh();
 
         $this->assertSame('Unchanged', $document->title);
         $this->assertSame('Still here', $document->body);
+        $this->assertDatabaseCount('handbook_documents', 1);
+    }
+
+    public function test_resync_leaves_the_database_unchanged_when_embeddings_fail(): void
+    {
+        $document = HandbookDocument::factory()->create([
+            'slug' => 'kept-policy',
+            'title' => 'Unchanged',
+            'body' => 'Still here',
+        ]);
+
+        Embeddings::fake(
+            fn (): never => throw RateLimitedException::forProvider('openai'),
+        );
+
+        try {
+            $this->artisan('handbook:resync');
+            $this->fail('Embedding failure should stop the resync.');
+        } catch (RateLimitedException) {
+        }
+
+        $document->refresh();
+
+        $this->assertSame('Unchanged', $document->title);
+        $this->assertSame('Still here', $document->body);
+        $this->assertFalse(
+            HandbookDocument::query()->where('slug', 'returns-and-refunds')->exists(),
+        );
         $this->assertDatabaseCount('handbook_documents', 1);
     }
 

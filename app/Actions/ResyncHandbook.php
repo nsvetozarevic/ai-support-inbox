@@ -8,6 +8,9 @@ use App\Models\HandbookDocument;
 use App\Utilities\DocumentLoader;
 use App\Utilities\HandbookChunker;
 use Illuminate\Support\Facades\DB;
+use Laravel\Ai\Embeddings;
+use Laravel\Ai\Exceptions\EmbeddingsCountMismatchException;
+use Laravel\Ai\Responses\EmbeddingsResponse;
 
 class ResyncHandbook
 {
@@ -18,10 +21,29 @@ class ResyncHandbook
 
     public function handle(): void
     {
-        $documents = $this->loader->documents();
-        $slugs = array_column($documents, 'slug');
+        $catalog = $this->loader->documents();
+        $documents = [];
+        $bodies = [];
 
-        DB::transaction(function () use ($documents, $slugs): void {
+        foreach ($catalog as $document) {
+            $chunks = $this->chunker->split($document['body']);
+            $documents[] = [
+                'title' => $document['title'],
+                'slug' => $document['slug'],
+                'body' => $document['body'],
+                'chunks' => $chunks,
+            ];
+            foreach ($chunks as $chunk) {
+                $bodies[] = $chunk;
+            }
+        }
+
+        $embeddings = $bodies === [] ? null : $this->embed($bodies);
+
+        DB::transaction(function () use ($documents, $embeddings): void {
+            $offset = 0;
+            $slugs = [];
+
             foreach ($documents as $document) {
                 $handbookDocument = HandbookDocument::query()->updateOrCreate(
                     ['slug' => $document['slug']],
@@ -31,22 +53,68 @@ class ResyncHandbook
                     ],
                 );
 
-                $this->rebuildChunks($handbookDocument);
+                $count = count($document['chunks']);
+                $vectors = $embeddings === null
+                    ? []
+                    : array_slice($embeddings->embeddings, $offset, $count);
+
+                $this->storeChunks(
+                    $handbookDocument,
+                    $document['chunks'],
+                    $vectors,
+                    $embeddings?->meta->model,
+                    $embeddings === null ? null : count($embeddings->first()),
+                );
+
+                $offset += $count;
+                $slugs[] = $document['slug'];
             }
 
             $this->deleteMissingDocuments($slugs);
         });
     }
 
-    private function rebuildChunks(HandbookDocument $document): void
+    /**
+     * @param  list<string>  $bodies
+     */
+    private function embed(array $bodies): EmbeddingsResponse
     {
+        $response = Embeddings::for($bodies)
+            ->dimensions((int) config('handbook.embeddings.dimensions'))
+            ->timeout(60)
+            ->generate(
+                (string) config('ai.default_for_embeddings'),
+                (string) config('handbook.embeddings.model'),
+            );
+
+        if (count($response->embeddings) !== count($bodies)) {
+            throw new EmbeddingsCountMismatchException(count($bodies), count($response->embeddings));
+        }
+
+        return $response;
+    }
+
+    /**
+     * @param  list<string>  $chunks
+     * @param  list<array<int, float>>  $vectors
+     */
+    private function storeChunks(
+        HandbookDocument $document,
+        array $chunks,
+        array $vectors,
+        ?string $model,
+        ?int $dimensions,
+    ): void {
         $document->chunks()->delete();
 
-        foreach ($this->chunker->split($document->body) as $position => $body) {
+        foreach ($chunks as $position => $body) {
             $document->chunks()->create([
                 'key' => $document->slug.':'.$position,
                 'position' => $position,
                 'body' => $body,
+                'embedding' => $vectors[$position],
+                'embedding_model' => $model,
+                'embedding_dimensions' => $dimensions,
             ]);
         }
     }

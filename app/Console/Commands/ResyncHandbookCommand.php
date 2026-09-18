@@ -10,7 +10,7 @@ use Illuminate\Console\Attributes\Signature;
 use Illuminate\Console\Command;
 
 #[Signature('handbook:resync')]
-#[Description('Upsert handbook pages from the catalog, rebuild chunks, and remove pages the catalog dropped')]
+#[Description('Upsert handbook documents from the catalog, rebuild and embed chunks, and remove documents the catalog dropped')]
 class ResyncHandbookCommand extends Command
 {
     public function handle(ResyncHandbook $resyncHandbook): int
