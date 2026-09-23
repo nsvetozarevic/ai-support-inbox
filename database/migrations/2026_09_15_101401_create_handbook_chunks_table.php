@@ -23,6 +23,7 @@ return new class extends Migration
             $table->vector('embedding', dimensions: 1536)->nullable()->index();
             $table->timestamps();
 
+            $table->fullText('body');
             $table->unique(['handbook_document_id', 'position']);
         });
     }

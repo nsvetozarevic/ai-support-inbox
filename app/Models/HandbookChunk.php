@@ -32,7 +32,7 @@ class HandbookChunk extends Model
     /**
      * @return BelongsTo<HandbookDocument, $this>
      */
-    public function document(): BelongsTo
+    public function handbookDocument(): BelongsTo
     {
         return $this->belongsTo(HandbookDocument::class);
     }

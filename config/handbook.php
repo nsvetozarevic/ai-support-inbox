@@ -15,6 +15,24 @@ return [
     ],
 
     /*
+    | Pinned so the Cohere provider default cannot drift.
+    */
+    'reranking' => [
+        'model' => 'rerank-v3.5',
+    ],
+
+    /*
+    | max_chunks caps word search, vector search, and the merge.
+    | rerank_limit is how many of those chunks go to the draft later.
+    */
+    'retrieval' => [
+        'max_chunks' => 20,
+        'rerank_limit' => 8,
+        'rrf_k' => 60,
+        'min_similarity' => 0.6,
+    ],
+
+    /*
     | Characters, not tokens. lid is target + window (not configurable).
     */
     'chunking' => [

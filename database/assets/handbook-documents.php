@@ -82,6 +82,14 @@ The counter is a desk, not a shop. There is a small shelf behind the till. If yo
 Staff break 13:00–13:20. One person stays on the desk. Packing may pause. The 14:00 same-day packing cut-off does not move.
 
 Weather shuts the yard: notice on the site. Click-and-collect 14-day shelf still runs from the original ready email unless we write to extend it.
+
+Bank-holiday Monday is always closed even if the rest of the high street is open. Do not book a collect for that morning. A Tuesday after a Monday holiday is a normal open day; packing is slower because Friday’s late orders are still on the rack.
+
+If the banner says we close at 16:00 for stocktake, that time wins over these hours for that date only. Empty banner means 10:00–18:00. We do not extend 18:00 because you are stuck on the A1.
+
+Phone the counter only for “is my collect on the shelf”. Policy questions stay on email with the order number. The till cannot override a written rule, and they will not hold the line while they “just check with packing”.
+
+A wedding planner, a journalist, or a wholesale buyer still uses these hours. We do not open Sunday for a shoot. Email the day before if you need a specific colour pulled to the shelf; that is a collect, not a private viewing.
 TXT,
     ],
     [
@@ -101,6 +109,14 @@ Core colours. Totes: navy, oat, black. Blankets: charcoal, cream, rust. Mugs: na
 We do not sell seconds on the site. A slub in the canvas is first quality. A hole from our rack should never have been packed.
 
 Checkout says out of stock: believe checkout, not the page you still have open. Emailing “just pack it” does not fill an empty bin. Dye lots of the same colour name shift; read colour-and-batch-variation before you buy two blankets a month apart.
+
+We do not restock a colour because one Instagram post used it. If the page says sold out, that colour is finished. Out of stock without sold out is only this morning’s empty bin; see restocks. We will not take a deposit for a tote that is not a listed preorder.
+
+Samples on the counter are not for sale unless they have a till sticker. A mug with a hairline from the shelf is not a seconds bin; we do not run seconds. Ask before you photograph the rack; other people’s orders sit behind that shelf.
+
+Bundles are not a product. Adding a notebook to a tote in the notes does not create a gift set. Two lines in the basket are two lines. We will not write a combined SKU so you can “keep the set together” on a return.
+
+Core colours can disappear for a mill week without a preorder page. That is not a secret restock date. Subscribe to nothing: there is no SMS list. Buy what is on the site or wait for a public preorder.
 TXT,
     ],
     [
@@ -277,6 +293,14 @@ Mill delay: we change the page date. The 14-day late clock uses the date that wa
 Payment is captured in full at checkout, not on ship day. Not a deposit. Valid cancel: full capture back.
 
 No colour swap after the 24-hour window. That is a cancel (if still allowed) plus a new order.
+
+A listed ship date is a packing target, not a Royal Mail delivery date. Add the usual 3–5 UK working days after we hand it over. International preorders still wait the 7–14 business days after dispatch, not after you paid.
+
+If we move the date twice, the 14-day late clock still uses the date that was on the page when you paid. We email each time. Silence after the first miss is not a cancel; you have to reply if you want the refund.
+
+Do not mix two different preorder dates in one basket and expect the earlier line to ship first. The whole basket waits for the latest date. Split checkouts if you need the mug now.
+
+We do not add you to a mill queue by email. If the run is full the page says sold out. A screenshot of an old date is not a booking. Payment is the only lock, and only while the 24-hour cancel window and the late-ship extra cancel still apply.
 TXT,
     ],
     [
@@ -296,6 +320,14 @@ Delivery date for the 14 days is the recipient’s delivery, not Christmas morni
 Damaged gifts: 48-hour photo rule. Recipient can email. Reship goes to the original delivery address unless the buyer (with the number) asks for theirs, and only if we have not packed the reship yet.
 
 “Hide prices on slip” hides unit prices from the recipient. We still need the order number here. We do not tell them what you paid.
+
+A recipient who wants a different colour still returns unused and the refund hits the buyer. They cannot walk out of Newcastle with navy because the gift was oat. That is a new paid order, or the buyer starts a return.
+
+We will not hold a gift behind the till past the 14-day collect shelf if it was a collect gift. Same 14 days from the ready email. Christmas wrapping at home does not stop the delivery clock on a posted gift.
+
+If the buyer and the recipient both email, we pick the thread that quotes the order number. Two stories without a number is two lookups we will not do. A photo of a tree and a tote is not a lookup.
+
+Gift messages are printed once. We do not reprint a card after dispatch. A rude or customs-dodging note is dropped; the parcel still goes. See gift-wrapping.
 TXT,
     ],
     [
@@ -315,6 +347,14 @@ There is one size per line. “I thought the throw was a bedspread” is a 14-da
 Sale is not exchangeable. Final sale means you keep it or you did not buy it.
 
 Walk-ins may inspect before they pay at the till. That is not an exchange of something we already posted. You cannot walk in with a posted oat tote and leave with navy without a return plus a new sale.
+
+We do not “just swap it on the system” while the original is still in the post. The posted line has to come back unused if it qualifies, then you buy again at the price on the site that day.
+
+A wrong size does not exist as a product. Throws are throws. If you needed a bedspread, that is a 14-day unused return if the blanket still qualifies, not a warehouse hunt for a size we do not cut.
+
+Sale and outlet still cannot be exchanged after they leave the counter. Inspect collect sales before you go. Posted sale is final sale when it arrives, same as the returns page.
+
+We will not keep your refund open as store credit for a restock that may never exist. Sold out is finished. Closest in stock is only for wrong or damaged replacements, not for a change of mind.
 TXT,
     ],
     [
@@ -336,6 +376,14 @@ Lost the ready email: number + ID is enough. We will not describe the colour out
 Sale collect: inspect before you leave. Once it is in the car it is accepted.
 
 Street parking only (warehouse-visits). Cannot come: named friend, or, still inside 14 days, ask us to convert back to post. Under £40 that conversion may add £3.95.
+
+ID must match the checkout name unless you named the friend in email first. A screenshot of someone else’s card is not ID. We will not hand a collect to a taxi driver with a first name in the notes.
+
+If you miss the 14-day shelf we refund the goods. We do not keep the tote in a “maybe they will come” crate. Buying it again is a new order at today’s price.
+
+Convert-to-post after the ready email is still a change while we have it on the shelf. Once it is in a mailer for Royal Mail, it is a posted order. You cannot collect a parcel we already labelled.
+
+Collect is Newcastle only. We do not leave bags at a neighbour unit, a hotel, or a rail station. International buyers cannot collect. A UK billing address with a collect tick is still a UK collect if checkout said so.
 TXT,
     ],
     [
@@ -390,6 +438,14 @@ Preorders: 24-hour rule on that document wins. A mixed preorder basket is not ca
 We do not cancel because someone else is cheaper. We do not cancel because Royal Mail is slow.
 
 Wrong email at checkout: you may miss tracking. Write from a mailbox you control, quote the number from PayPal or the card, we add a note. Still no lookup by name alone.
+
+A colour change is always cancel plus repurchase if the order is still unlocked. We do not edit a paid line from oat to navy. If the new colour is dearer you pay a new checkout; if cheaper you pay the new price on a new order, we do not refund the difference onto a cancelled line as credit.
+
+Once the Royal Mail label exists we will not stop the van. Calling the counter at 14:05 does not pull a labelled bag off the trolley. After that you are on 14-day unused returns, or the 48-hour damaged path if it arrives wrong.
+
+Two checkouts in a panic are two orders. Write both numbers. We cancel only the unlocked duplicate. If both went out, return one unused if it qualifies.
+
+We do not cancel because a friend found it cheaper, because you saw a code after you paid, or because Royal Mail is on day four of a 3–5 window. Those are not unlock reasons.
 TXT,
     ],
     [
@@ -409,6 +465,14 @@ Royal Mail sender is Northshore Supply. Recipients can see who posted it. Surpri
 No extra blank cards or birthday stamps.
 
 A note that asks us to lie on a customs form is ignored. International still gets a commercial invoice.
+
+We do not stock ribbon, tissue, or branded boxes for a fee. “I will pay extra” in the notes is still a no. Wrap at home or collect and wrap yourself.
+
+The gift line on the card is plain text. Emoji may print as boxes. We do not preview it. Max 120 characters is a cut, not a scroll.
+
+Hide prices does not hide that Northshore sent the parcel. Royal Mail’s label is us. If that ruins a surprise, collect in Newcastle and take it yourself.
+
+A packing slip in a collect bag can still show a total if staff look it up. Tell your friend to bring the order number and ID, not to argue about the price at the desk.
 TXT,
     ],
     [
@@ -428,6 +492,14 @@ Hardware: a drop of oil on a sticky D-ring is fine. Vinegar soaks are not. Rinse
 Week-one failure: send photos anyway. Abuse is a no. A stitch that parts on day two of gentle use is a defect.
 
 Instagram staff saying they 30-degree their tote is not policy. There is no secret machine-wash workaround.
+
+A machine-washed tote is used. We will not refund it as unused even if you “only did a cold cycle”. Same for a blanket that went to a cleaner. Moth balls in a cupboard are your storage, not a manufacturing defect.
+
+Mug care is hand-wash. A hotel dishwasher or a camper van 12V heater is still a void. Hairline cracks after a knock are impact; use damaged-or-wrong-item if you saw it at delivery, warranty only for manufacturing within 12 months.
+
+Notebooks left in a wet porch are not replaced. Ink bleed from a fountain pen is expected on this paper. Peeling the cover to see the board is damage.
+
+Week-one stitch failure still needs photos and the order number. We will not guess from a blurry reel. Hardware that rusts after a beach week is wear; rinse and dry is on the care list for a reason.
 TXT,
     ],
     [
@@ -447,6 +519,14 @@ Influencers do not get a hidden pile. If a colour comes back it will be a public
 We may reuse a colour name years later on a new lot. That is a new item. It may not match your 2024 oat tote. See colour-and-batch-variation.
 
 Wholesale cannot resurrect a dead consumer colour. They get the current catalogue.
+
+Sold out is not “maybe in six months”. Do not email for a date. Out of stock without sold out can come back without notice; we still do not take a card against it unless the page is a preorder.
+
+Staff will not hold the last navy tote for a phone call at 17:50. Add to basket and pay, or someone else will. An abandoned basket is not a hold even if you screenshotted it.
+
+If a colour name returns years later it is a new lot. It may not match your old oat. That is colour-and-batch-variation, not a restock of the same item.
+
+Influencer codes and wholesale accounts do not unlock a hidden pile. If it is not on the public page or a listed preorder, we do not have it for you.
 TXT,
     ],
     [
@@ -468,6 +548,14 @@ Shop shipping is quoted on the invoice, not the £3.95 consumer table. Pallet is
 We stop a colour: same sold-out rule. We will not run a short dye for one café.
 
 A consumer checkout email is not a wholesale invoice. Paid retail by mistake: see VAT invoices. We do not rewrite it to wholesale after dispatch.
+
+We do not open a new dye lot because one café wants 200 rust blankets next week. Current catalogue or nothing. First order still has the £400 minimum excluding shipping.
+
+Accounts that pay late are paused. We do not ship the next carton until the invoice is clear. Sale-or-return at Christmas is still a no.
+
+Photographs of packing damage from a shop still need the 5-business-day window, not the consumer 48 hours. A box that sat in a stockroom for three weeks is not a packing claim.
+
+Your-logo, Amazon, and drop-ship for other brands stay out. Using our product photos on a marketplace listing as if you were us is a refusal and a takedown, not a wholesale yes.
 TXT,
     ],
     [
@@ -487,6 +575,14 @@ Our registration number is on the invoice when you ask. It is not in Instagram h
 Lost the receipt: we can resend if you have the order number. That is still a receipt until you ask for the invoice.
 
 Click-and-collect includes VAT. Card at the counter is preferred. Ask for the invoice email the same day if you need one.
+
+We will not issue a VAT invoice to a company that was not the checkout buyer. A bookkeeper emailing later still needs the original order number and the legal name that should have been on the order.
+
+No splitting one basket across two VAT numbers. No backdated “this was actually for the Ltd”. Consumer checkout is consumer VAT inclusive. Reverse charge is not a button on this site.
+
+Lost PDF: we resend the receipt if you have the number. The VAT invoice is a separate ask. Instagram DMs are not the invoice queue.
+
+Wholesale invoices are a different document. Do not forward a consumer receipt to your accountant and call it a wholesale invoice. If you paid retail by mistake, we still do not rewrite it after dispatch.
 TXT,
     ],
     [
@@ -506,6 +602,14 @@ We do not price-match Amazon, a department store, or last season. We do not hono
 A leaked staff code: we may cancel, refund, and explain. Do not share packing-bench codes.
 
 Wholesale invoices cannot use INSTAGRAM15. Different world.
+
+A code that expired at midnight UK time is expired. We do not honour “my phone was on holiday time”. Stacking two 10% stories is still one box at checkout, and if it failed it failed.
+
+We do not apply a code after payment, not even the same afternoon. That is not a change-of-mind cancel unless the order is still unlocked and you want to cancel and repurchase. Forgot-the-code is not unlock.
+
+Sale and outlet ignore campaign codes. Shipping never takes a code. A banner that says 15% off totes does not move blankets. Read the banner.
+
+Staff cannot type a discount at the till because you are polite. A journalist, a wedding, or a bulk consumer basket still pays checkout unless a printed site campaign says otherwise.
 TXT,
     ],
     [
@@ -525,6 +629,14 @@ Counter returns still need the order number. We inspect later that day or the ne
 Rude to staff: we can put you on email-only. Rare, written down.
 
 Unit number is on the ready email. A what3words on social does not override it. Gate shut: wait. Do not climb it.
+
+We do not run warehouse tours, unboxings, or “content days” without a written manager yes, which is usually no. Photographing other people’s labels is a refusal. Leave dogs outside except assistance dogs.
+
+Returns handed over the desk still wait for inspection. The 5-business-day refund clock does not start when you drop the bag. Bring the order number; a name is not enough.
+
+Parking in the yard is for vans we booked, not for customers. Street only. We do not sign for your other deliveries. Bikes lock on the street.
+
+Rude to staff can put you on email-only. That letter is written down. Collect still needs ID and the number; it does not become a shouting match at the till.
 TXT,
     ],
     [
@@ -546,6 +658,14 @@ Packing error: damaged-or-wrong-item. A complaint is for when you think we have 
 We keep the thread on the order number. We do not talk to a newspaper about your order without you, and we do not talk about someone else’s order with you.
 
 Abusive mail: one warning, then we stop except for legal process.
+
+Use complaints@northshore.example, not the packing-bench Instagram. Five business days is a reply, not an instant reship. Quote the order number and say whether you want reship, refund, or an explanation.
+
+A Trustpilot one-star is not a ticket. We may reply there in public language; the file still lives on the email thread. Chargebacks pause the file until the scheme ends.
+
+If the first reply applied sale-is-final and you still want a tote for free, the manager will say no again. There is no third mailbox that overrides the written policy.
+
+Packing mistakes belong on damaged-or-wrong-item with the 48-hour photo pack. A complaint is when you think we ignored that path, or you need it in writing for a bank.
 TXT,
     ],
     [
@@ -565,6 +685,14 @@ Enamel speckle is a finish. Do not scour it. Cream shows more than navy.
 No posted swatches. Cheapest look at a navy family is a mug or notebook, and even then mug navy is not tote navy.
 
 Two items in one order that look like two different colour names: photo both with the slip within 48 hours. That can be a mispack. Same SKU, just a batch shift: we will say so and we will not reship.
+
+We do not post paper swatches. Buying a mug to “check navy” is still a mug sale; mug navy is not tote navy. Return the mug unused in 14 days if it qualifies, or keep it.
+
+A slub in the canvas is first quality. A hole, a warehouse stain, or a broken strap is damaged-or-wrong-item within 48 hours. Later seam failure may be the 30-day manufacturing path on warranty, not a colour claim.
+
+Phone night-mode and shop-window LEDs are not our daylight photos. “Brighter on my screen” is not a wrong item. Two blankets that must match belong in one order from one dye lot.
+
+A colour name reused years later is a new lot. It is allowed to look different. That is not a defect and not a reason to open a June carton to match January.
 TXT,
     ],
     [
@@ -584,6 +712,14 @@ We do not call 10 minutes out. We do not reroute a van. We do not ask the driver
 No what3words instead of a postcode. UK needs a postcode. International needs a structured address the carrier accepts.
 
 Moving house: change the address while unlocked. After dispatch you are on Royal Mail’s redirect products. We do not pay for that.
+
+We do not call when the van is ten minutes away. We do not ask a driver to wait on the sixth floor. Click and collect if you need a handover.
+
+A gated code belongs in the address line if you are willing to have it on a slip. Notes-only codes are often ignored. Failed access is an attempted delivery, not a lost parcel.
+
+“Leave in the shed” is still a request. Theft after a delivered scan on a porch you ticked as fine is lost-parcels, not an automatic reship.
+
+No what3words as a substitute for a UK postcode. International needs the structured address the carrier accepts. We cannot add a neighbour after the label exists.
 TXT,
     ],
 ];

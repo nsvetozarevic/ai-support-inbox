@@ -44,6 +44,10 @@ class ResyncHandbookCommandTest extends TestCase
         $this->assertStringContainsString('14 days', $document->body);
         $this->assertModelMissing($staleChunk);
         $this->assertGreaterThan(1, $chunks->count());
+        $this->assertGreaterThan(
+            (int) config('handbook.retrieval.max_chunks'),
+            HandbookChunk::query()->count(),
+        );
         $this->assertSame(range(0, $chunks->count() - 1), $chunks->pluck('position')->all());
         foreach ($chunks as $chunk) {
             $this->assertSame($document->slug.':'.$chunk->position, $chunk->key);
