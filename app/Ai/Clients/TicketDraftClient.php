@@ -1,0 +1,106 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Ai\Clients;
+
+use App\Ai\Agents\TicketDraft;
+use App\Data\TicketDraftData;
+use App\Enums\AiPromptLogStatus;
+use App\Exceptions\InvalidTicketDraftException;
+use App\Models\HandbookChunk;
+use App\Models\Ticket;
+use App\Utilities\HandbookRetriever;
+use Illuminate\Support\Collection;
+use Laravel\Ai\Responses\Data\Usage;
+use Throwable;
+
+class TicketDraftClient
+{
+    public function __construct(
+        private TicketDraft $draft,
+        private HandbookRetriever $retriever,
+    ) {}
+
+    public function draft(Ticket $ticket): ?TicketDraftData
+    {
+        $chunks = $this->retriever->retrieve($ticket->message);
+
+        if ($chunks->isEmpty()) {
+            return null;
+        }
+
+        $prompt = $this->promptFor($ticket, $chunks);
+
+        try {
+            $response = $this->draft->prompt($prompt);
+        } catch (Throwable $exception) {
+            $this->record($ticket, AiPromptLogStatus::Failed, $prompt, exception: $exception);
+
+            throw $exception;
+        }
+
+        return $this->generateResponse($ticket, $prompt, $response->toArray(), $response->usage);
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     */
+    private function generateResponse(Ticket $ticket, string $prompt, array $payload, Usage $usage): ?TicketDraftData
+    {
+        try {
+            $draft = TicketDraftData::from($payload);
+        } catch (InvalidTicketDraftException) {
+            $this->record($ticket, AiPromptLogStatus::Invalid, $prompt, $payload, $usage);
+
+            return null;
+        }
+
+        $this->record($ticket, AiPromptLogStatus::Accepted, $prompt, $draft->toArray(), $usage);
+
+        return $draft;
+    }
+
+    /**
+     * @param  Collection<int, HandbookChunk>  $chunks
+     */
+    private function promptFor(Ticket $ticket, Collection $chunks): string
+    {
+        $excerpts = $chunks->values()->map(
+            fn (HandbookChunk $chunk, int $index): string => sprintf('[%d]%s%s', $index + 1, PHP_EOL, $chunk->body),
+        )->implode(PHP_EOL.PHP_EOL);
+
+        return sprintf(
+            'Customer message:%s%s%s%sHandbook excerpts:%s%s',
+            PHP_EOL,
+            $ticket->message,
+            PHP_EOL,
+            PHP_EOL,
+            PHP_EOL,
+            $excerpts,
+        );
+    }
+
+    /**
+     * @param  array<string, mixed>|null  $responsePayload
+     */
+    private function record(
+        Ticket $ticket,
+        AiPromptLogStatus $status,
+        string $prompt,
+        ?array $responsePayload = null,
+        ?Usage $usage = null,
+        ?Throwable $exception = null,
+    ): void {
+        $ticket->aiPromptLogs()->create([
+            'agent' => TicketDraft::class,
+            'instructions' => (string) $this->draft->instructions(),
+            'input' => $prompt,
+            'response' => $responsePayload,
+            'status' => $status,
+            'prompt_tokens' => $usage?->promptTokens,
+            'completion_tokens' => $usage?->completionTokens,
+            'error' => $exception === null ? null : $exception::class.': '.$exception->getMessage(),
+        ]);
+    }
+}
