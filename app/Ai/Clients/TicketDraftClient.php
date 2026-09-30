@@ -40,7 +40,21 @@ class TicketDraftClient
             throw $exception;
         }
 
-        return $this->generateResponse($ticket, $prompt, $response->toArray(), $response->usage);
+        $draft = $this->generateResponse($ticket, $prompt, $response->toArray(), $response->usage);
+
+        if ($draft === null) {
+            return null;
+        }
+
+        $groundedDraft = $this->ground($ticket, $prompt, $draft, $chunks, $response->usage);
+
+        if ($groundedDraft === null) {
+            return null;
+        }
+
+        $this->record($ticket, AiPromptLogStatus::Accepted, $prompt, $groundedDraft->toArray(), $response->usage);
+
+        return $groundedDraft;
     }
 
     /**
@@ -49,16 +63,48 @@ class TicketDraftClient
     private function generateResponse(Ticket $ticket, string $prompt, array $payload, Usage $usage): ?TicketDraftData
     {
         try {
-            $draft = TicketDraftData::from($payload);
+            return TicketDraftData::from($payload);
         } catch (InvalidTicketDraftException) {
             $this->record($ticket, AiPromptLogStatus::Invalid, $prompt, $payload, $usage);
 
             return null;
         }
+    }
 
-        $this->record($ticket, AiPromptLogStatus::Accepted, $prompt, $draft->toArray(), $usage);
+    /**
+     * @param  Collection<int, HandbookChunk>  $chunks
+     */
+    private function ground(Ticket $ticket, string $prompt, TicketDraftData $draft, Collection $chunks, Usage $usage): ?TicketDraftData
+    {
+        if (! $this->quotesAppearInChunks($draft, $chunks)) {
+            $this->record($ticket, AiPromptLogStatus::Invalid, $prompt, $draft->toArray(), $usage);
+
+            return null;
+        }
 
         return $draft;
+    }
+
+    /**
+     * @param  Collection<int, HandbookChunk>  $chunks
+     */
+    private function quotesAppearInChunks(TicketDraftData $draft, Collection $chunks): bool
+    {
+        foreach ($draft->quotes as $quote) {
+            if (trim($quote) === '') {
+                return false;
+            }
+
+            $appears = $chunks->contains(
+                fn (HandbookChunk $chunk): bool => str_contains($chunk->body, $quote),
+            );
+
+            if (! $appears) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     /**

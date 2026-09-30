@@ -106,6 +106,33 @@ class TicketDraftClientTest extends TestCase
         ], $log->response);
     }
 
+    public function test_a_quote_missing_from_the_handbook_is_not_accepted(): void
+    {
+        $this->storeChunk('payment', 'No Amex. Visa and Mastercard only.', $this->axis(0));
+        $ticket = Ticket::factory()->create(['message' => 'Amex']);
+
+        Embeddings::fake([[$this->axis(0)]]);
+        $this->fakeRerankKeepingOrder();
+        TicketDraft::fake([
+            [
+                'reply' => 'We accept Amex.',
+                'quotes' => ['We accept Amex.'],
+            ],
+        ])->preventStrayPrompts();
+
+        $draft = $this->client()->draft($ticket);
+
+        $this->assertNull($draft);
+        $this->assertNull($ticket->fresh()->reply);
+
+        $log = AiPromptLog::query()->sole();
+        $this->assertSame(AiPromptLogStatus::Invalid, $log->status);
+        $this->assertSame([
+            'reply' => 'We accept Amex.',
+            'quotes' => ['We accept Amex.'],
+        ], $log->response);
+    }
+
     public function test_a_provider_failure_is_logged_and_rethrows(): void
     {
         $this->storeChunk('payment', 'No Amex. Visa and Mastercard only.', $this->axis(0));
