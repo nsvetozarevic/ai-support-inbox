@@ -9,10 +9,13 @@ use App\Ai\Agents\TicketTriage;
 use App\Enums\AiPromptLogStatus;
 use App\Enums\TicketIntent;
 use App\Enums\TicketStatus;
+use App\Jobs\DraftTicket;
+use App\Jobs\TriageTicket;
 use App\Models\AiPromptLog;
 use App\Models\Ticket;
 use App\Routing\WebRoute;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\RateLimiter;
 use Laravel\Ai\Embeddings;
 use Laravel\Ai\Prompts\EmbeddingsPrompt;
@@ -56,6 +59,23 @@ class StoreTicketControllerTest extends TestCase
         $this->assertNull($ticket->reply);
         Embeddings::assertGenerated(fn (EmbeddingsPrompt $prompt): bool => $prompt->contains('Where is my order #1001?'));
         TicketDraft::assertNeverPrompted();
+    }
+
+    public function test_valid_submission_queues_triage_and_draft(): void
+    {
+        Queue::fake();
+
+        $this->post(route(WebRoute::StoreTicket), [
+            'name' => 'Ada Lovelace',
+            'email' => 'ada@example.com',
+            'message' => 'Where is my order #1001?',
+        ])
+            ->assertRedirect(route(WebRoute::ShowTicketCreated));
+
+        $ticket = Ticket::query()->sole();
+
+        Queue::assertPushed(TriageTicket::class, fn (TriageTicket $job): bool => $job->ticket->is($ticket));
+        Queue::assertPushed(DraftTicket::class, fn (DraftTicket $job): bool => $job->ticket->is($ticket));
     }
 
     public function test_invalid_model_intent_is_not_stored(): void

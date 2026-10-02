@@ -17,9 +17,8 @@ class StoreTicketController extends Controller
     {
         $ticket = Ticket::query()->create($request->safe()->only(['name', 'email', 'message']));
 
-        TriageTicket::dispatch($ticket)->chain([
-            new DraftTicket($ticket),
-        ]);
+        TriageTicket::dispatch($ticket);
+        DraftTicket::dispatch($ticket);
 
         return redirect()->route(WebRoute::ShowTicketCreated);
     }
