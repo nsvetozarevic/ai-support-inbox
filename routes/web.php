@@ -13,7 +13,7 @@ use App\Routing\WebRoute;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', CreateTicketController::class)->name(WebRoute::CreateTicket);
-Route::post('/', StoreTicketController::class)->name(WebRoute::StoreTicket);
+Route::post('/', StoreTicketController::class)->middleware('throttle:tickets')->name(WebRoute::StoreTicket);
 Route::get('/submitted', ShowTicketCreatedController::class)->name(WebRoute::ShowTicketCreated);
 Route::get('/inbox', IndexTicketsController::class)->name(WebRoute::IndexTickets);
 Route::get('/inbox/{ticket}', ShowTicketController::class)->name(WebRoute::ShowTicket);

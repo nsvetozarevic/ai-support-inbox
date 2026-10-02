@@ -7,6 +7,9 @@ namespace App\Providers;
 use App\Data\ChunkSeparatorData;
 use App\Data\HandbookChunkingData;
 use App\Utilities\HandbookChunker;
+use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -31,7 +34,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        //
+        RateLimiter::for('tickets', fn (Request $request): Limit => Limit::perHour(10)->by($request->ip()));
     }
 
     /**

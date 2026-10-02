@@ -13,6 +13,7 @@ use App\Models\AiPromptLog;
 use App\Models\Ticket;
 use App\Routing\WebRoute;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\RateLimiter;
 use Laravel\Ai\Embeddings;
 use Laravel\Ai\Prompts\EmbeddingsPrompt;
 use Laravel\Ai\Reranking;
@@ -77,6 +78,17 @@ class StoreTicketControllerTest extends TestCase
         $this->assertSame('Where is my order #1001?', $log->input);
         $this->assertSame(['intent' => 'not-an-intent'], $log->response);
         $this->assertSame(AiPromptLogStatus::Invalid, $log->status);
+    }
+
+    public function test_one_visitor_is_limited_to_ten_submissions_an_hour(): void
+    {
+        RateLimiter::increment(md5('tickets'.'127.0.0.1'), 3600, 10);
+
+        $this->post(route(WebRoute::StoreTicket))->assertTooManyRequests();
+
+        $this->withServerVariables(['REMOTE_ADDR' => '10.0.0.2'])
+            ->post(route(WebRoute::StoreTicket))
+            ->assertSessionHasErrors('message');
     }
 
     private function fakeDraftRetrieval(): void
