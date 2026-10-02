@@ -23,6 +23,7 @@ class TicketFactory extends Factory
             'email' => fake()->safeEmail(),
             'message' => fake()->paragraph(),
             'reply' => null,
+            'reply_quotes' => null,
             'intent' => null,
             'status' => TicketStatus::New,
         ];

@@ -32,6 +32,16 @@
                     <p class="mt-1 text-sm text-red-700">{{ $message }}</p>
                 @enderror
             </div>
+            @if ($ticket->reply_quotes)
+                <div class="rounded-md border border-zinc-200 bg-white px-4 py-3">
+                    <p class="text-xs font-medium uppercase tracking-wide text-zinc-500">From the handbook</p>
+                    <ul class="mt-2 space-y-2">
+                        @foreach ($ticket->reply_quotes as $quote)
+                            <li class="text-sm text-zinc-700">"{{ $quote }}"</li>
+                        @endforeach
+                    </ul>
+                </div>
+            @endif
             <div class="flex gap-3">
                 <button type="submit" class="rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white">
                     Send

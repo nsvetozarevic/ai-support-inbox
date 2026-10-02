@@ -55,6 +55,21 @@ class ShowTicketControllerTest extends TestCase
             ->assertSee('We do not take Amex.');
     }
 
+    public function test_show_page_lists_the_reply_quotes_above_send(): void
+    {
+        $ticket = Ticket::factory()->create([
+            'reply' => 'We do not take Amex.',
+            'reply_quotes' => ['No Amex. Visa and Mastercard only.'],
+        ]);
+
+        $this->get(route(WebRoute::ShowTicket, $ticket))
+            ->assertSeeInOrder([
+                'From the handbook',
+                'No Amex. Visa and Mastercard only.',
+                'Send',
+            ]);
+    }
+
     public function test_missing_ticket_returns_404(): void
     {
         $this->get('/inbox/999')->assertNotFound();

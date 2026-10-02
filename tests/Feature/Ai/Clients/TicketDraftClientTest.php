@@ -50,6 +50,7 @@ class TicketDraftClientTest extends TestCase
         $this->assertSame('We do not take Amex.', $draft->reply);
         $this->assertSame(['No Amex. Visa and Mastercard only.'], $draft->quotes);
         $this->assertSame('We do not take Amex.', $ticket->fresh()->reply);
+        $this->assertSame(['No Amex. Visa and Mastercard only.'], $ticket->fresh()->reply_quotes);
 
         TicketDraft::assertPrompted(fn (AgentPrompt $prompt): bool => $prompt->contains('Amex')
             && $prompt->contains('No Amex. Visa and Mastercard only.'));
@@ -86,6 +87,7 @@ class TicketDraftClientTest extends TestCase
 
         $this->assertInstanceOf(TicketDraftData::class, $draft);
         $this->assertSame('Staff already wrote this.', $ticket->fresh()->reply);
+        $this->assertNull($ticket->fresh()->reply_quotes);
         $this->assertSame(AiPromptLogStatus::Accepted, AiPromptLog::query()->sole()->status);
     }
 
@@ -158,6 +160,33 @@ class TicketDraftClientTest extends TestCase
         $this->assertSame([
             'reply' => 'We accept Amex.',
             'quotes' => ['We accept Amex.'],
+        ], $log->response);
+    }
+
+    public function test_a_draft_without_quotes_is_not_accepted(): void
+    {
+        $this->storeChunk('payment', 'No Amex. Visa and Mastercard only.', $this->axis(0));
+        $ticket = Ticket::factory()->create(['message' => 'Amex']);
+
+        Embeddings::fake([[$this->axis(0)]]);
+        $this->fakeRerankKeepingOrder();
+        TicketDraft::fake([
+            [
+                'reply' => 'Yes, we accept Amex on every order.',
+                'quotes' => [],
+            ],
+        ])->preventStrayPrompts();
+
+        $draft = $this->client()->draft($ticket);
+
+        $this->assertNull($draft);
+        $this->assertNull($ticket->fresh()->reply);
+
+        $log = AiPromptLog::query()->sole();
+        $this->assertSame(AiPromptLogStatus::Invalid, $log->status);
+        $this->assertSame([
+            'reply' => 'Yes, we accept Amex on every order.',
+            'quotes' => [],
         ], $log->response);
     }
 

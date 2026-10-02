@@ -12,7 +12,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-#[Fillable(['name', 'email', 'message', 'reply', 'intent', 'status'])]
+#[Fillable(['name', 'email', 'message', 'reply', 'reply_quotes', 'intent', 'status'])]
 class Ticket extends Model
 {
     /** @use HasFactory<TicketFactory> */
@@ -31,6 +31,7 @@ class Ticket extends Model
     protected function casts(): array
     {
         return [
+            'reply_quotes' => 'array',
             'status' => TicketStatus::class,
             'intent' => TicketIntent::class,
         ];

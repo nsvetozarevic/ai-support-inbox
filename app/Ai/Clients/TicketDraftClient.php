@@ -76,6 +76,7 @@ class TicketDraftClient
 
         $ticket->update([
             'reply' => $draft->reply,
+            'reply_quotes' => $draft->quotes,
         ]);
     }
 
@@ -112,6 +113,10 @@ class TicketDraftClient
      */
     private function quotesAppearInChunks(TicketDraftData $draft, Collection $chunks): bool
     {
+        if ($draft->quotes === []) {
+            return false;
+        }
+
         foreach ($draft->quotes as $quote) {
             if (trim($quote) === '') {
                 return false;
