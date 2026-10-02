@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use App\Enums\AiModel;
+
 return [
 
     'catalog' => database_path('assets/handbook-documents.php'),
@@ -10,15 +12,15 @@ return [
     | Must match the handbook_chunks.embedding vector column.
     */
     'embeddings' => [
-        'model' => 'text-embedding-3-small',
+        'model' => AiModel::TextEmbedding3Small->value,
         'dimensions' => 1536,
     ],
 
     /*
-    | Pinned so the Cohere provider default cannot drift.
+    | The provider is AiModel::RerankV35->provider() (Cohere).
     */
     'reranking' => [
-        'model' => 'rerank-v3.5',
+        'model' => AiModel::RerankV35->value,
     ],
 
     /*

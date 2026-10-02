@@ -23,6 +23,31 @@ return [
     'default_for_reranking' => 'cohere',
 
     /*
+    | Circuit breaker. Keys are the provider and model strings on the call.
+    |
+    | Insufficient credits open the provider immediately. A connection blip is retried by
+    | the job; a burst of them opens the provider. Rate limits and overloads
+    | open only that model. After the wait, calls go through again. The open
+    | value stays half_open_seconds longer, so a failure then blocks again at once.
+    | Jobs parked by a block wait up to release_jitter_seconds extra, so they
+    | do not all hit the provider in the same second.
+    */
+    'circuit_breaker' => [
+        'half_open_seconds' => 90,
+        'release_jitter_seconds' => 30,
+        'provider' => [
+            'connection_failures' => 3,
+            'connection_window_seconds' => 60,
+            'open_seconds' => 900,
+        ],
+        'model' => [
+            'failures' => 3,
+            'window_seconds' => 60,
+            'open_seconds' => 60,
+        ],
+    ],
+
+    /*
     |--------------------------------------------------------------------------
     | Caching
     |--------------------------------------------------------------------------

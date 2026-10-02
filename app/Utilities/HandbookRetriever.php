@@ -4,12 +4,18 @@ declare(strict_types=1);
 
 namespace App\Utilities;
 
+use App\Ai\AiCircuitBreaker;
+use App\Enums\AiModel;
+use App\Exceptions\AiCircuitOpenException;
 use App\Models\HandbookChunk;
 use Illuminate\Support\Collection;
 use Laravel\Ai\Embeddings;
+use Throwable;
 
 class HandbookRetriever
 {
+    public function __construct(private AiCircuitBreaker $circuitBreaker) {}
+
     /**
      * @return Collection<int, HandbookChunk>
      */
@@ -70,14 +76,27 @@ class HandbookRetriever
      */
     private function embedQuery(string $query): array
     {
-        return Embeddings::for([$query])
-            ->dimensions((int) config('handbook.embeddings.dimensions'))
-            ->timeout(60)
-            ->generate(
-                (string) config('ai.default_for_embeddings'),
-                (string) config('handbook.embeddings.model'),
-            )
-            ->first();
+        $aiModel = AiModel::from((string) config('handbook.embeddings.model'));
+        $provider = $aiModel->provider()->value;
+        $model = $aiModel->value;
+
+        $this->circuitBreaker->ensureAvailable($aiModel);
+
+        try {
+            $vector = Embeddings::for([$query])
+                ->dimensions((int) config('handbook.embeddings.dimensions'))
+                ->timeout(60)
+                ->generate($provider, $model)
+                ->first();
+        } catch (Throwable $exception) {
+            $this->circuitBreaker->recordFailure($aiModel, $exception);
+
+            throw $exception;
+        }
+
+        $this->circuitBreaker->recordSuccess($aiModel);
+
+        return $vector;
     }
 
     /**
@@ -116,6 +135,8 @@ class HandbookRetriever
     }
 
     /**
+     * Falls back to the fused order when the reranker is blocked or fails.
+     *
      * @param  Collection<int, HandbookChunk>  $chunks
      * @return Collection<int, HandbookChunk>
      */
@@ -125,12 +146,26 @@ class HandbookRetriever
             return $chunks;
         }
 
-        return $chunks->rerank(
-            'body',
-            $query,
-            (int) config('handbook.retrieval.rerank_limit'),
-            (string) config('ai.default_for_reranking'),
-            (string) config('handbook.reranking.model'),
-        )->values();
+        $limit = (int) config('handbook.retrieval.rerank_limit');
+        $aiModel = AiModel::from((string) config('handbook.reranking.model'));
+        $provider = $aiModel->provider()->value;
+        $model = $aiModel->value;
+
+        try {
+            $this->circuitBreaker->ensureAvailable($aiModel);
+
+            $reranked = $chunks->rerank('body', $query, $limit, $provider, $model)->values();
+        } catch (AiCircuitOpenException) {
+            return $chunks->take($limit)->values();
+        } catch (Throwable $exception) {
+            $this->circuitBreaker->recordFailure($aiModel, $exception);
+            report($exception);
+
+            return $chunks->take($limit)->values();
+        }
+
+        $this->circuitBreaker->recordSuccess($aiModel);
+
+        return $reranked;
     }
 }

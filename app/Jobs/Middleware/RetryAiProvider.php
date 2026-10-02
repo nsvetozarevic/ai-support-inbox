@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Jobs\Middleware;
 
+use App\Enums\AiCircuitOpenReason;
+use App\Exceptions\AiCircuitOpenException;
 use Closure;
 use Illuminate\Http\Client\RequestException;
 use Laravel\Ai\Exceptions\ProviderConnectionException;
@@ -31,6 +33,10 @@ class RetryAiProvider
 
     private function shouldRetry(Throwable $exception): bool
     {
+        if ($exception instanceof AiCircuitOpenException) {
+            return $exception->reason !== AiCircuitOpenReason::InsufficientCredits;
+        }
+
         if ($exception instanceof RateLimitedException
             || $exception instanceof ProviderConnectionException
             || $exception instanceof ProviderOverloadedException) {
@@ -49,11 +55,16 @@ class RetryAiProvider
             return;
         }
 
-        $job->release($this->retryDelay($job));
+        $job->release($this->retryDelay($job, $exception));
     }
 
-    private function retryDelay(object $job): int
+    private function retryDelay(object $job, Throwable $exception): int
     {
+        if ($exception instanceof AiCircuitOpenException) {
+            return max(1, $exception->until - now()->getTimestamp())
+                + random_int(0, (int) config('ai.circuit_breaker.release_jitter_seconds'));
+        }
+
         return 20 * (2 ** ($job->attempts() - 1));
     }
 }

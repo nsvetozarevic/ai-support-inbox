@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Ai\Clients;
 
 use App\Ai\Agents\TicketTriage;
+use App\Ai\AiCircuitBreaker;
+use App\Enums\AiModel;
 use App\Enums\AiPromptLogStatus;
 use App\Enums\TicketIntent;
 use App\Models\Ticket;
@@ -13,17 +15,27 @@ use Throwable;
 
 class TicketTriageClient
 {
-    public function __construct(private TicketTriage $triage) {}
+    public function __construct(
+        private TicketTriage $triage,
+        private AiCircuitBreaker $circuitBreaker,
+    ) {}
 
     public function triage(Ticket $ticket): ?TicketIntent
     {
+        $model = AiModel::Gpt4oMini;
+
+        $this->circuitBreaker->ensureAvailable($model);
+
         try {
             $response = $this->triage->prompt($ticket->message);
         } catch (Throwable $exception) {
+            $this->circuitBreaker->recordFailure($model, $exception);
             $this->record($ticket, AiPromptLogStatus::Failed, exception: $exception);
 
             throw $exception;
         }
+
+        $this->circuitBreaker->recordSuccess($model);
 
         $responsePayload = [
             'intent' => $response['intent'] ?? null,

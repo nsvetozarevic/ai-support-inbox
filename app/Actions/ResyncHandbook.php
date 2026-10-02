@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Actions;
 
+use App\Ai\AiCircuitBreaker;
+use App\Enums\AiModel;
 use App\Models\HandbookDocument;
 use App\Utilities\DocumentLoader;
 use App\Utilities\HandbookChunker;
@@ -11,12 +13,14 @@ use Illuminate\Support\Facades\DB;
 use Laravel\Ai\Embeddings;
 use Laravel\Ai\Exceptions\EmbeddingsCountMismatchException;
 use Laravel\Ai\Responses\EmbeddingsResponse;
+use Throwable;
 
 class ResyncHandbook
 {
     public function __construct(
         private DocumentLoader $loader,
         private HandbookChunker $chunker,
+        private AiCircuitBreaker $circuitBreaker,
     ) {}
 
     public function handle(): void
@@ -79,13 +83,24 @@ class ResyncHandbook
      */
     private function embed(array $bodies): EmbeddingsResponse
     {
-        $response = Embeddings::for($bodies)
-            ->dimensions((int) config('handbook.embeddings.dimensions'))
-            ->timeout(60)
-            ->generate(
-                (string) config('ai.default_for_embeddings'),
-                (string) config('handbook.embeddings.model'),
-            );
+        $aiModel = AiModel::from((string) config('handbook.embeddings.model'));
+        $provider = $aiModel->provider()->value;
+        $model = $aiModel->value;
+
+        $this->circuitBreaker->ensureAvailable($aiModel);
+
+        try {
+            $response = Embeddings::for($bodies)
+                ->dimensions((int) config('handbook.embeddings.dimensions'))
+                ->timeout(60)
+                ->generate($provider, $model);
+        } catch (Throwable $exception) {
+            $this->circuitBreaker->recordFailure($aiModel, $exception);
+
+            throw $exception;
+        }
+
+        $this->circuitBreaker->recordSuccess($aiModel);
 
         if (count($response->embeddings) !== count($bodies)) {
             throw new EmbeddingsCountMismatchException(count($bodies), count($response->embeddings));

@@ -5,9 +5,12 @@ declare(strict_types=1);
 namespace Tests\Feature\Ai\Clients;
 
 use App\Ai\Agents\TicketDraft;
+use App\Ai\AiCircuitBreaker;
 use App\Ai\Clients\TicketDraftClient;
 use App\Data\TicketDraftData;
+use App\Enums\AiModel;
 use App\Enums\AiPromptLogStatus;
+use App\Exceptions\AiCircuitOpenException;
 use App\Models\AiPromptLog;
 use App\Models\HandbookChunk;
 use App\Models\HandbookDocument;
@@ -15,6 +18,7 @@ use App\Models\Ticket;
 use App\Utilities\HandbookRetriever;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Ai\Embeddings;
+use Laravel\Ai\Enums\Lab;
 use Laravel\Ai\Exceptions\RateLimitedException;
 use Laravel\Ai\Prompts\AgentPrompt;
 use Laravel\Ai\Prompts\RerankingPrompt;
@@ -165,7 +169,7 @@ class TicketDraftClientTest extends TestCase
         Embeddings::fake([[$this->axis(0)]]);
         $this->fakeRerankKeepingOrder();
         TicketDraft::fake(
-            fn () => throw RateLimitedException::forProvider('openai'),
+            fn () => throw RateLimitedException::forProvider(Lab::OpenAI->value),
         )->preventStrayPrompts();
 
         try {
@@ -182,9 +186,40 @@ class TicketDraftClientTest extends TestCase
         }
     }
 
+    public function test_an_open_chat_circuit_does_not_prompt_for_a_draft(): void
+    {
+        $this->storeChunk('payment', 'No Amex. Visa and Mastercard only.', $this->axis(0));
+        $ticket = Ticket::factory()->create(['message' => 'Amex']);
+
+        Embeddings::fake([[$this->axis(0)]]);
+        $this->fakeRerankKeepingOrder();
+        TicketDraft::fake()->preventStrayPrompts();
+
+        $circuitBreaker = new AiCircuitBreaker;
+
+        // Circuit open for 3 attempts.
+        foreach (range(1, 3) as $ignored) {
+            $circuitBreaker->recordFailure(
+                AiModel::Gpt4oMini,
+                RateLimitedException::forProvider(Lab::OpenAI->value),
+            );
+        }
+
+        try {
+            $this->client()->draft($ticket);
+            $this->fail('An open chat circuit should not prompt for a draft.');
+        } catch (AiCircuitOpenException) {
+            $this->assertNull($ticket->fresh()->reply);
+            $this->assertSame(0, AiPromptLog::query()->count());
+            TicketDraft::assertNeverPrompted();
+        }
+    }
+
     private function client(): TicketDraftClient
     {
-        return new TicketDraftClient(new TicketDraft, new HandbookRetriever);
+        $circuitBreaker = new AiCircuitBreaker;
+
+        return new TicketDraftClient(new TicketDraft, new HandbookRetriever($circuitBreaker), $circuitBreaker);
     }
 
     /**
@@ -204,7 +239,7 @@ class TicketDraftClientTest extends TestCase
             'position' => 0,
             'body' => $body,
             'embedding' => $embedding,
-            'embedding_model' => 'text-embedding-3-small',
+            'embedding_model' => AiModel::TextEmbedding3Small->value,
             'embedding_dimensions' => 1536,
         ]);
     }

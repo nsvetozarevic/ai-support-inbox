@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace Tests\Feature\Jobs;
 
 use App\Ai\Agents\TicketDraft;
+use App\Ai\AiCircuitBreaker;
 use App\Ai\Clients\TicketDraftClient;
+use App\Enums\AiModel;
 use App\Jobs\DraftTicket;
 use App\Models\HandbookChunk;
 use App\Models\HandbookDocument;
@@ -13,6 +15,7 @@ use App\Models\Ticket;
 use App\Utilities\HandbookRetriever;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Ai\Embeddings;
+use Laravel\Ai\Enums\Lab;
 use Laravel\Ai\Exceptions\InsufficientCreditsException;
 use Laravel\Ai\Exceptions\RateLimitedException;
 use Laravel\Ai\Prompts\RerankingPrompt;
@@ -55,7 +58,7 @@ class DraftTicketTest extends TestCase
         Embeddings::fake([[$this->axis(0)]]);
         $this->fakeRerankKeepingOrder();
         TicketDraft::fake(
-            fn () => throw RateLimitedException::forProvider('openai'),
+            fn () => throw RateLimitedException::forProvider(Lab::OpenAI->value),
         )->preventStrayPrompts();
 
         $job = (new DraftTicket($ticket))->withFakeQueueInteractions();
@@ -75,7 +78,7 @@ class DraftTicketTest extends TestCase
         Embeddings::fake([[$this->axis(0)]]);
         $this->fakeRerankKeepingOrder();
         TicketDraft::fake(
-            fn () => throw InsufficientCreditsException::forProvider('openai'),
+            fn () => throw InsufficientCreditsException::forProvider(Lab::OpenAI->value),
         )->preventStrayPrompts();
 
         $job = (new DraftTicket($ticket))->withFakeQueueInteractions();
@@ -97,7 +100,9 @@ class DraftTicketTest extends TestCase
 
     private function client(): TicketDraftClient
     {
-        return new TicketDraftClient(new TicketDraft, new HandbookRetriever);
+        $circuitBreaker = new AiCircuitBreaker;
+
+        return new TicketDraftClient(new TicketDraft, new HandbookRetriever($circuitBreaker), $circuitBreaker);
     }
 
     /**
@@ -117,7 +122,7 @@ class DraftTicketTest extends TestCase
             'position' => 0,
             'body' => $body,
             'embedding' => $embedding,
-            'embedding_model' => 'text-embedding-3-small',
+            'embedding_model' => AiModel::TextEmbedding3Small->value,
             'embedding_dimensions' => 1536,
         ]);
     }

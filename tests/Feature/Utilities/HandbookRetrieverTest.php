@@ -4,11 +4,17 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Utilities;
 
+use App\Ai\AiCircuitBreaker;
+use App\Enums\AiModel;
+use App\Exceptions\AiCircuitOpenException;
 use App\Models\HandbookChunk;
 use App\Models\HandbookDocument;
 use App\Utilities\HandbookRetriever;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Exceptions;
 use Laravel\Ai\Embeddings;
+use Laravel\Ai\Enums\Lab;
+use Laravel\Ai\Exceptions\RateLimitedException;
 use Laravel\Ai\Prompts\EmbeddingsPrompt;
 use Laravel\Ai\Prompts\RerankingPrompt;
 use Laravel\Ai\Reranking;
@@ -29,7 +35,7 @@ class HandbookRetrieverTest extends TestCase
         Embeddings::fake([[$this->axis(0)]]);
         $this->fakeRerankKeepingOrder();
 
-        $chunks = (new HandbookRetriever)->retrieve($query);
+        $chunks = $this->retriever()->retrieve($query);
 
         $this->assertSame($slug, $chunks->first()?->handbookDocument->slug);
         Embeddings::assertGenerated(fn (EmbeddingsPrompt $prompt): bool => $prompt->contains($query));
@@ -43,7 +49,7 @@ class HandbookRetrieverTest extends TestCase
         Embeddings::fake([[$this->axis(0)]]);
         $this->fakeRerankKeepingOrder();
 
-        $chunks = (new HandbookRetriever)->retrieve('I want my money back');
+        $chunks = $this->retriever()->retrieve('I want my money back');
 
         $this->assertSame('returns-and-refunds', $chunks->first()?->handbookDocument->slug);
     }
@@ -56,7 +62,7 @@ class HandbookRetrieverTest extends TestCase
         Embeddings::fake([[$this->axis(0)]]);
         $this->fakeRerankKeepingOrder();
 
-        $chunks = (new HandbookRetriever)->retrieve('Amex');
+        $chunks = $this->retriever()->retrieve('Amex');
 
         $this->assertSame(['payment', 'shipping'], $chunks->pluck('handbookDocument.slug')->all());
     }
@@ -79,11 +85,11 @@ class HandbookRetrieverTest extends TestCase
             ];
         });
 
-        $chunks = (new HandbookRetriever)->retrieve('Amex');
+        $chunks = $this->retriever()->retrieve('Amex');
 
         $this->assertSame(['shipping'], $chunks->pluck('handbookDocument.slug')->all());
         Reranking::assertReranked(fn (RerankingPrompt $prompt): bool => $prompt->limit === 1
-            && $prompt->model === 'rerank-v3.5'
+            && $prompt->model === AiModel::RerankV35->value
             && $prompt->contains('Amex')
             && $prompt->documentsContain('No Amex'));
     }
@@ -95,7 +101,7 @@ class HandbookRetrieverTest extends TestCase
         Embeddings::fake([[$this->axis(0)]]);
         Reranking::fake()->preventStrayRerankings();
 
-        $chunks = (new HandbookRetriever)->retrieve('zzzz-not-a-token');
+        $chunks = $this->retriever()->retrieve('zzzz-not-a-token');
 
         $this->assertTrue($chunks->isEmpty());
         Reranking::assertNothingReranked();
@@ -106,11 +112,76 @@ class HandbookRetrieverTest extends TestCase
         Embeddings::fake()->preventStrayEmbeddings();
         Reranking::fake()->preventStrayRerankings();
 
-        $chunks = (new HandbookRetriever)->retrieve('   ');
+        $chunks = $this->retriever()->retrieve('   ');
 
         $this->assertTrue($chunks->isEmpty());
         Embeddings::assertNothingGenerated();
         Reranking::assertNothingReranked();
+    }
+
+    public function test_an_open_embedding_circuit_does_not_embed_or_rerank(): void
+    {
+        Embeddings::fake()->preventStrayEmbeddings();
+        Reranking::fake()->preventStrayRerankings();
+
+        $circuitBreaker = new AiCircuitBreaker;
+
+        foreach (range(1, 3) as $ignored) {
+            $circuitBreaker->recordFailure(
+                AiModel::TextEmbedding3Small,
+                RateLimitedException::forProvider(Lab::OpenAI->value),
+            );
+        }
+
+        try {
+            $this->retriever()->retrieve('Amex');
+            $this->fail('An open embedding circuit should stop retrieval.');
+        } catch (AiCircuitOpenException) {
+            Embeddings::assertNothingGenerated();
+            Reranking::assertNothingReranked();
+        }
+    }
+
+    public function test_an_open_rerank_circuit_returns_the_fused_order_without_reranking(): void
+    {
+        config(['handbook.retrieval.rerank_limit' => 1]);
+
+        $this->storeChunk('payment', 'No Amex. Visa and Mastercard only.', $this->axis(0));
+        $this->storeChunk('shipping', 'Royal Mail from Newcastle in three to five days.', $this->axis(0));
+
+        Embeddings::fake([[$this->axis(0)]]);
+        Reranking::fake()->preventStrayRerankings();
+
+        $circuitBreaker = new AiCircuitBreaker;
+
+        foreach (range(1, 3) as $ignored) {
+            $circuitBreaker->recordFailure(
+                AiModel::RerankV35,
+                RateLimitedException::forProvider(Lab::Cohere->value),
+            );
+        }
+
+        $chunks = $this->retriever()->retrieve('Amex');
+
+        $this->assertSame(['payment'], $chunks->pluck('handbookDocument.slug')->all());
+        Reranking::assertNothingReranked();
+    }
+
+    public function test_a_failed_rerank_returns_the_fused_order_and_reports_the_failure(): void
+    {
+        config(['handbook.retrieval.rerank_limit' => 1]);
+
+        $this->storeChunk('payment', 'No Amex. Visa and Mastercard only.', $this->axis(0));
+        $this->storeChunk('shipping', 'Royal Mail from Newcastle in three to five days.', $this->axis(0));
+
+        Embeddings::fake([[$this->axis(0)]]);
+        Reranking::fake(fn () => throw RateLimitedException::forProvider(Lab::Cohere->value));
+        Exceptions::fake();
+
+        $chunks = $this->retriever()->retrieve('Amex');
+
+        $this->assertSame(['payment'], $chunks->pluck('handbookDocument.slug')->all());
+        Exceptions::assertReported(RateLimitedException::class);
     }
 
     /**
@@ -142,7 +213,7 @@ class HandbookRetrieverTest extends TestCase
             'position' => 0,
             'body' => $body,
             'embedding' => $embedding,
-            'embedding_model' => 'text-embedding-3-small',
+            'embedding_model' => AiModel::TextEmbedding3Small->value,
             'embedding_dimensions' => 1536,
         ]);
     }
@@ -165,6 +236,11 @@ class HandbookRetrieverTest extends TestCase
 
             return $ranked;
         });
+    }
+
+    private function retriever(): HandbookRetriever
+    {
+        return new HandbookRetriever(new AiCircuitBreaker);
     }
 
     /**

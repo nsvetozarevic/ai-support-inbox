@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace App\Ai\Clients;
 
 use App\Ai\Agents\TicketDraft;
+use App\Ai\AiCircuitBreaker;
 use App\Data\TicketDraftData;
+use App\Enums\AiModel;
 use App\Enums\AiPromptLogStatus;
 use App\Exceptions\InvalidTicketDraftException;
 use App\Models\HandbookChunk;
@@ -20,6 +22,7 @@ class TicketDraftClient
     public function __construct(
         private TicketDraft $draft,
         private HandbookRetriever $retriever,
+        private AiCircuitBreaker $circuitBreaker,
     ) {}
 
     public function draft(Ticket $ticket): ?TicketDraftData
@@ -31,14 +34,20 @@ class TicketDraftClient
         }
 
         $prompt = $this->promptFor($ticket, $chunks);
+        $model = AiModel::Gpt4oMini;
+
+        $this->circuitBreaker->ensureAvailable($model);
 
         try {
             $response = $this->draft->prompt($prompt);
         } catch (Throwable $exception) {
+            $this->circuitBreaker->recordFailure($model, $exception);
             $this->record($ticket, AiPromptLogStatus::Failed, $prompt, exception: $exception);
 
             throw $exception;
         }
+
+        $this->circuitBreaker->recordSuccess($model);
 
         $draft = $this->generateResponse($ticket, $prompt, $response->toArray(), $response->usage);
 

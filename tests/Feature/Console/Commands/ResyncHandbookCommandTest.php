@@ -4,12 +4,17 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Console\Commands;
 
+use App\Ai\AiCircuitBreaker;
+use App\Enums\AiModel;
+use App\Exceptions\AiCircuitOpenException;
 use App\Models\HandbookChunk;
 use App\Models\HandbookDocument;
 use App\Models\Ticket;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Validation\ValidationException;
 use Laravel\Ai\Embeddings;
+use Laravel\Ai\Enums\Lab;
+use Laravel\Ai\Exceptions\InsufficientCreditsException;
 use Laravel\Ai\Exceptions\RateLimitedException;
 use Laravel\Ai\Prompts\EmbeddingsPrompt;
 use Tests\TestCase;
@@ -54,12 +59,12 @@ class ResyncHandbookCommandTest extends TestCase
             $this->assertNotSame('stale', $chunk->body);
             $this->assertIsArray($chunk->embedding);
             $this->assertCount(1536, $chunk->embedding);
-            $this->assertSame('text-embedding-3-small', $chunk->embedding_model);
+            $this->assertSame(AiModel::TextEmbedding3Small->value, $chunk->embedding_model);
             $this->assertSame(1536, $chunk->embedding_dimensions);
         }
         $this->assertSame(0, HandbookChunk::query()->whereNull('embedding')->count());
         $this->assertModelExists($ticket);
-        Embeddings::assertGenerated(fn (EmbeddingsPrompt $prompt): bool => $prompt->model === 'text-embedding-3-small' && $prompt->dimensions === 1536 && $prompt->contains('14 days'));
+        Embeddings::assertGenerated(fn (EmbeddingsPrompt $prompt): bool => $prompt->model === AiModel::TextEmbedding3Small->value && $prompt->dimensions === 1536 && $prompt->contains('14 days'));
     }
 
     public function test_resync_removes_documents_that_are_no_longer_in_the_catalog(): void
@@ -126,7 +131,7 @@ class ResyncHandbookCommandTest extends TestCase
         ]);
 
         Embeddings::fake(
-            fn (): never => throw RateLimitedException::forProvider('openai'),
+            fn (): never => throw RateLimitedException::forProvider(Lab::OpenAI->value),
         );
 
         try {
@@ -142,6 +147,35 @@ class ResyncHandbookCommandTest extends TestCase
         $this->assertFalse(
             HandbookDocument::query()->where('slug', 'returns-and-refunds')->exists(),
         );
+        $this->assertDatabaseCount('handbook_documents', 1);
+    }
+
+    public function test_an_open_provider_circuit_does_not_embed(): void
+    {
+        $document = HandbookDocument::factory()->create([
+            'slug' => 'kept-policy',
+            'title' => 'Unchanged',
+            'body' => 'Still here',
+        ]);
+
+        Embeddings::fake()->preventStrayEmbeddings();
+
+        (new AiCircuitBreaker)->recordFailure(
+            AiModel::TextEmbedding3Small,
+            InsufficientCreditsException::forProvider(Lab::OpenAI->value),
+        );
+
+        try {
+            $this->artisan('handbook:resync');
+            $this->fail('An open provider circuit should stop the resync.');
+        } catch (AiCircuitOpenException) {
+            Embeddings::assertNothingGenerated();
+        }
+
+        $document->refresh();
+
+        $this->assertSame('Unchanged', $document->title);
+        $this->assertSame('Still here', $document->body);
         $this->assertDatabaseCount('handbook_documents', 1);
     }
 

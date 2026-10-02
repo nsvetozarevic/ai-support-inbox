@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Ai\Agents;
 
+use App\Enums\AiModel;
 use App\Enums\TicketIntent;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Ai\Attributes\Model;
@@ -17,7 +18,7 @@ use Laravel\Ai\Promptable;
 use Stringable;
 
 #[Provider(Lab::OpenAI)]
-#[Model('gpt-4o-mini')]
+#[Model(AiModel::Gpt4oMini->value)]
 #[Temperature(0)]
 #[Timeout(60)]
 class TicketTriage implements Agent, HasStructuredOutput
