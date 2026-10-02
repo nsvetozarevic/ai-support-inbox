@@ -54,7 +54,20 @@ class TicketDraftClient
 
         $this->record($ticket, AiPromptLogStatus::Accepted, $prompt, $groundedDraft->toArray(), $response->usage);
 
+        $this->suggestReply($ticket, $groundedDraft);
+
         return $groundedDraft;
+    }
+
+    private function suggestReply(Ticket $ticket, TicketDraftData $draft): void
+    {
+        if (trim((string) $ticket->reply) !== '') {
+            return;
+        }
+
+        $ticket->update([
+            'reply' => $draft->reply,
+        ]);
     }
 
     /**

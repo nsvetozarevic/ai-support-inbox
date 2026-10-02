@@ -29,7 +29,7 @@ class TriageTicketTest extends TestCase
 
         $job = $this->triageJobOnAttempt(Ticket::factory()->create(), $attempt);
 
-        $job->handle($this->triageClient());
+        $this->runThroughMiddleware($job);
 
         $job->assertReleased($delay);
         $job->assertNotFailed();
@@ -52,7 +52,7 @@ class TriageTicketTest extends TestCase
 
         $job = $this->triageJobOnAttempt(Ticket::factory()->create(), 3);
 
-        $job->handle($this->triageClient());
+        $this->runThroughMiddleware($job);
 
         $job->assertFailedWith($exception);
         $job->assertNotReleased();
@@ -69,7 +69,7 @@ class TriageTicketTest extends TestCase
         $job = $this->triageJobOnAttempt(Ticket::factory()->create(), 1);
 
         try {
-            $job->handle($this->triageClient());
+            $this->runThroughMiddleware($job);
             $this->fail('Insufficient credits should not be caught by the job.');
         } catch (InsufficientCreditsException) {
             $job->assertNotReleased();
@@ -87,6 +87,11 @@ class TriageTicketTest extends TestCase
             'first attempt waits 20 seconds' => [1, 20],
             'second attempt waits 40 seconds' => [2, 40],
         ];
+    }
+
+    private function runThroughMiddleware(TriageTicket $job): void
+    {
+        $job->middleware()[0]->handle($job, fn () => $job->handle($this->triageClient()));
     }
 
     private function triageJobOnAttempt(Ticket $ticket, int $attempt): TriageTicket

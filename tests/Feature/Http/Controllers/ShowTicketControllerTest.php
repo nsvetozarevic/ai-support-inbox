@@ -45,6 +45,16 @@ class ShowTicketControllerTest extends TestCase
             ->assertSee('accepted');
     }
 
+    public function test_show_page_prefills_the_suggested_reply(): void
+    {
+        $ticket = Ticket::factory()->create([
+            'reply' => 'We do not take Amex.',
+        ]);
+
+        $this->get(route(WebRoute::ShowTicket, $ticket))
+            ->assertSee('We do not take Amex.');
+    }
+
     public function test_missing_ticket_returns_404(): void
     {
         $this->get('/inbox/999')->assertNotFound();

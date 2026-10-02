@@ -27,7 +27,7 @@
                     name="reply"
                     rows="6"
                     class="mt-1 w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm"
-                >{{ old('reply') }}</textarea>
+                >{{ old('reply', $ticket->reply) }}</textarea>
                 @error('reply')
                     <p class="mt-1 text-sm text-red-700">{{ $message }}</p>
                 @enderror

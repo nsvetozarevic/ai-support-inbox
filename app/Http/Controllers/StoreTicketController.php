@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreTicketRequest;
+use App\Jobs\DraftTicket;
 use App\Jobs\TriageTicket;
 use App\Models\Ticket;
 use App\Routing\WebRoute;
@@ -16,7 +17,9 @@ class StoreTicketController extends Controller
     {
         $ticket = Ticket::query()->create($request->safe()->only(['name', 'email', 'message']));
 
-        TriageTicket::dispatch($ticket);
+        TriageTicket::dispatch($ticket)->chain([
+            new DraftTicket($ticket),
+        ]);
 
         return redirect()->route(WebRoute::ShowTicketCreated);
     }

@@ -26,7 +26,7 @@ class TicketDraftClientTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_a_matching_chunk_is_logged_and_the_reply_is_left_empty(): void
+    public function test_a_matching_chunk_is_logged_and_suggests_a_reply(): void
     {
         $this->storeChunk('payment', 'No Amex. Visa and Mastercard only.', $this->axis(0));
         $ticket = Ticket::factory()->create(['message' => 'Amex']);
@@ -45,7 +45,7 @@ class TicketDraftClientTest extends TestCase
         $this->assertInstanceOf(TicketDraftData::class, $draft);
         $this->assertSame('We do not take Amex.', $draft->reply);
         $this->assertSame(['No Amex. Visa and Mastercard only.'], $draft->quotes);
-        $this->assertNull($ticket->fresh()->reply);
+        $this->assertSame('We do not take Amex.', $ticket->fresh()->reply);
 
         TicketDraft::assertPrompted(fn (AgentPrompt $prompt): bool => $prompt->contains('Amex')
             && $prompt->contains('No Amex. Visa and Mastercard only.'));
@@ -59,6 +59,30 @@ class TicketDraftClientTest extends TestCase
             'reply' => 'We do not take Amex.',
             'quotes' => ['No Amex. Visa and Mastercard only.'],
         ], $log->response);
+    }
+
+    public function test_a_grounded_draft_does_not_replace_an_existing_reply(): void
+    {
+        $this->storeChunk('payment', 'No Amex. Visa and Mastercard only.', $this->axis(0));
+        $ticket = Ticket::factory()->create([
+            'message' => 'Amex',
+            'reply' => 'Staff already wrote this.',
+        ]);
+
+        Embeddings::fake([[$this->axis(0)]]);
+        $this->fakeRerankKeepingOrder();
+        TicketDraft::fake([
+            [
+                'reply' => 'We do not take Amex.',
+                'quotes' => ['No Amex. Visa and Mastercard only.'],
+            ],
+        ])->preventStrayPrompts();
+
+        $draft = $this->client()->draft($ticket);
+
+        $this->assertInstanceOf(TicketDraftData::class, $draft);
+        $this->assertSame('Staff already wrote this.', $ticket->fresh()->reply);
+        $this->assertSame(AiPromptLogStatus::Accepted, AiPromptLog::query()->sole()->status);
     }
 
     public function test_a_ticket_with_no_handbook_matches_does_not_prompt(): void

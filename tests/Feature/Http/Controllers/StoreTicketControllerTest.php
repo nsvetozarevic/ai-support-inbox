@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Http\Controllers;
 
+use App\Ai\Agents\TicketDraft;
 use App\Ai\Agents\TicketTriage;
 use App\Enums\AiPromptLogStatus;
 use App\Enums\TicketIntent;
@@ -12,6 +13,9 @@ use App\Models\AiPromptLog;
 use App\Models\Ticket;
 use App\Routing\WebRoute;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Laravel\Ai\Embeddings;
+use Laravel\Ai\Prompts\EmbeddingsPrompt;
+use Laravel\Ai\Reranking;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
@@ -24,6 +28,7 @@ class StoreTicketControllerTest extends TestCase
         TicketTriage::fake([
             ['intent' => TicketIntent::Shipping->value],
         ])->preventStrayPrompts();
+        $this->fakeDraftRetrieval();
 
         $this->post(route(WebRoute::StoreTicket), [
             'name' => 'Ada Lovelace',
@@ -47,6 +52,9 @@ class StoreTicketControllerTest extends TestCase
         $this->assertSame('Where is my order #1001?', $log->input);
         $this->assertSame(['intent' => TicketIntent::Shipping->value], $log->response);
         $this->assertSame(AiPromptLogStatus::Accepted, $log->status);
+        $this->assertNull($ticket->reply);
+        Embeddings::assertGenerated(fn (EmbeddingsPrompt $prompt): bool => $prompt->contains('Where is my order #1001?'));
+        TicketDraft::assertNeverPrompted();
     }
 
     public function test_invalid_model_intent_is_not_stored(): void
@@ -54,6 +62,7 @@ class StoreTicketControllerTest extends TestCase
         TicketTriage::fake([
             ['intent' => 'not-an-intent'],
         ])->preventStrayPrompts();
+        $this->fakeDraftRetrieval();
 
         $this->post(route(WebRoute::StoreTicket), [
             'name' => 'Ada Lovelace',
@@ -68,6 +77,13 @@ class StoreTicketControllerTest extends TestCase
         $this->assertSame('Where is my order #1001?', $log->input);
         $this->assertSame(['intent' => 'not-an-intent'], $log->response);
         $this->assertSame(AiPromptLogStatus::Invalid, $log->status);
+    }
+
+    private function fakeDraftRetrieval(): void
+    {
+        Embeddings::fake([[array_fill(0, 1536, 0.0)]]);
+        Reranking::fake()->preventStrayRerankings();
+        TicketDraft::fake()->preventStrayPrompts();
     }
 
     /**
