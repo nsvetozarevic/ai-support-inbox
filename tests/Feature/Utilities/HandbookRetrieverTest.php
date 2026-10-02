@@ -193,6 +193,9 @@ class HandbookRetrieverTest extends TestCase
             'order number' => ['#1001', 'order-tracking', 'Every paid order has a number like #1001.'],
             'card brand' => ['Amex', 'payment', 'No American Express. Amex behind Apple Pay fails.'],
             'return window' => ['14 days', 'returns-and-refunds', '14 days. Unused. Original packaging.'],
+            'order number in a customer message' => ['Hello, where is my order #1001? It has not arrived yet.', 'order-tracking', 'Every paid order has a number like #1001.'],
+            'card brand in a customer message' => ['Hi, do you accept Amex cards for my order?', 'payment', 'No American Express. Amex behind Apple Pay fails.'],
+            'return window in a customer message' => ['Can I still send it back after 14 days?', 'returns-and-refunds', '14 days. Unused. Original packaging.'],
         ];
     }
 

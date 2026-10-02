@@ -9,6 +9,7 @@ use App\Enums\AiModel;
 use App\Exceptions\AiCircuitOpenException;
 use App\Models\HandbookChunk;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Str;
 use Laravel\Ai\Embeddings;
 use Throwable;
 
@@ -42,16 +43,40 @@ class HandbookRetriever
      */
     private function lexical(string $query, int $limit): Collection
     {
+        $anyWord = $this->anyWordQuery($query);
+
+        if ($anyWord === '') {
+            return collect();
+        }
+
         return HandbookChunk::query()
             ->with('handbookDocument')
-            ->whereFullText('body', $query)
+            ->whereFullText('body', $anyWord, ['mode' => 'websearch'])
             ->orderByRaw(
-                "ts_rank(to_tsvector('english', body), plainto_tsquery('english', ?)) desc",
-                [$query],
+                "ts_rank(to_tsvector('english', body), websearch_to_tsquery('english', ?)) desc",
+                [$anyWord],
             )
             ->orderBy('id')
             ->limit($limit)
             ->get();
+    }
+
+    /**
+     * Postgres full-text search requires every word by default, and a customer
+     * message rarely shares every word with one chunk. Plain words joined with
+     * websearch "or" let any word match; ts_rank puts chunks with more matches first.
+     *
+     * Only letters and digits are kept, because websearch reads a leading "-"
+     * as NOT and quotes as a phrase. Postgres still drops stop words and stems.
+     */
+    private function anyWordQuery(string $query): string
+    {
+        return Str::of($query)
+            ->replaceMatches('/[^\pL\pN]+/u', ' ')
+            ->squish()
+            ->explode(' ')
+            ->filter()
+            ->implode(' or ');
     }
 
     /**
