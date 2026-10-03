@@ -110,11 +110,11 @@ class HandbookRetriever
         try {
             $vector = Embeddings::for([$query])
                 ->dimensions((int) config('handbook.embeddings.dimensions'))
-                ->timeout(60)
+                ->timeout(30)
                 ->generate($provider, $model)
                 ->first();
         } catch (Throwable $exception) {
-            $this->circuitBreaker->recordFailure($aiModel, $exception);
+            $this->circuitBreaker->recordFailureAndThrowIfOpen($aiModel, $exception);
 
             throw $exception;
         }

@@ -10,6 +10,7 @@ enum AiCircuitOpenReason: string
     case Connection = 'connection';
     case RateLimit = 'rate_limit';
     case Overloaded = 'overloaded';
+    case ServerError = 'server_error';
 
     public function label(): string
     {
@@ -18,6 +19,7 @@ enum AiCircuitOpenReason: string
             self::Connection => 'connection',
             self::RateLimit => 'rate limit',
             self::Overloaded => 'overloaded',
+            self::ServerError => 'server error',
         };
     }
 }

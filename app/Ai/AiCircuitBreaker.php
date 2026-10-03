@@ -63,18 +63,40 @@ class AiCircuitBreaker
             return;
         }
 
-        if ($exception instanceof RateLimitedException || $exception instanceof ProviderOverloadedException) {
+        if ($exception instanceof RateLimitedException
+            || $exception instanceof ProviderOverloadedException
+            || $this->isServerError($exception)) {
+            $reason = match (true) {
+                $exception instanceof RateLimitedException => AiCircuitOpenReason::RateLimit,
+                $exception instanceof ProviderOverloadedException => AiCircuitOpenReason::Overloaded,
+                default => AiCircuitOpenReason::ServerError,
+            };
+
             $this->recordBurst(
                 $this->modelFailureKey($provider, $modelName),
                 (int) config('ai.circuit_breaker.model.failures'),
                 (int) config('ai.circuit_breaker.model.window_seconds'),
                 $this->modelKey($provider, $modelName),
                 (int) config('ai.circuit_breaker.model.open_seconds'),
-                $exception instanceof RateLimitedException
-                    ? AiCircuitOpenReason::RateLimit
-                    : AiCircuitOpenReason::Overloaded,
+                $reason,
             );
         }
+    }
+
+    /**
+     * For calls made by queued jobs. When this failure blocked the model or
+     * provider, the job gets AiCircuitOpenException and waits for the block
+     * instead of counting the failure against its max failures.
+     */
+    public function recordFailureAndThrowIfOpen(AiModel $model, Throwable $exception): void
+    {
+        $this->recordFailure($model, $exception);
+        $this->ensureAvailable($model);
+    }
+
+    private function isServerError(Throwable $exception): bool
+    {
+        return $exception instanceof RequestException && $exception->response->serverError();
     }
 
     /**

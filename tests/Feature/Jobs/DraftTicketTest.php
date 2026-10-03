@@ -8,6 +8,7 @@ use App\Ai\Agents\TicketDraft;
 use App\Ai\AiCircuitBreaker;
 use App\Ai\Clients\TicketDraftClient;
 use App\Enums\AiModel;
+use App\Exceptions\AiCircuitOpenException;
 use App\Jobs\DraftTicket;
 use App\Models\HandbookChunk;
 use App\Models\HandbookDocument;
@@ -21,6 +22,7 @@ use Laravel\Ai\Exceptions\RateLimitedException;
 use Laravel\Ai\Prompts\RerankingPrompt;
 use Laravel\Ai\Reranking;
 use Laravel\Ai\Responses\Data\RankedDocument;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 class DraftTicketTest extends TestCase
@@ -50,7 +52,7 @@ class DraftTicketTest extends TestCase
         $job->assertNotFailed();
     }
 
-    public function test_retryable_provider_failure_is_released(): void
+    public function test_a_failed_draft_call_is_released_for_another_try(): void
     {
         $this->storeChunk('payment', 'No Amex. Visa and Mastercard only.', $this->axis(0));
         $ticket = Ticket::factory()->create(['message' => 'Amex']);
@@ -65,12 +67,45 @@ class DraftTicketTest extends TestCase
 
         $this->runThroughMiddleware($job);
 
-        $job->assertReleased(20);
+        $job->assertReleased(10);
         $job->assertNotFailed();
         $this->assertNull($ticket->fresh()->reply);
     }
 
-    public function test_non_retryable_provider_failure_is_not_caught(): void
+    #[DataProvider('closedTickets')]
+    public function test_a_closed_ticket_is_skipped_without_searching_or_prompting(string $state): void
+    {
+        $this->storeChunk('payment', 'No Amex. Visa and Mastercard only.', $this->axis(0));
+        $ticket = Ticket::factory()->{$state}()->create(['message' => 'Amex']);
+        $reply = $ticket->reply;
+
+        Embeddings::fake();
+        Reranking::fake()->preventStrayRerankings();
+        TicketDraft::fake()->preventStrayPrompts();
+
+        $job = (new DraftTicket($ticket))->withFakeQueueInteractions();
+
+        $this->runThroughMiddleware($job);
+
+        $job->assertNotReleased();
+        $job->assertNotFailed();
+        $this->assertSame($reply, $ticket->fresh()->reply);
+        Embeddings::assertNothingGenerated();
+        TicketDraft::assertNeverPrompted();
+    }
+
+    /**
+     * @return array<string, array{0: string}>
+     */
+    public static function closedTickets(): array
+    {
+        return [
+            'sent' => ['sent'],
+            'discarded' => ['discarded'],
+        ];
+    }
+
+    public function test_insufficient_credits_are_rethrown_so_the_draft_job_fails_at_once(): void
     {
         $this->storeChunk('payment', 'No Amex. Visa and Mastercard only.', $this->axis(0));
         $ticket = Ticket::factory()->create(['message' => 'Amex']);
@@ -85,8 +120,8 @@ class DraftTicketTest extends TestCase
 
         try {
             $this->runThroughMiddleware($job);
-            $this->fail('Insufficient credits should not be caught by the job.');
-        } catch (InsufficientCreditsException) {
+            $this->fail('Insufficient credits should not be retried.');
+        } catch (AiCircuitOpenException) {
             $job->assertNotReleased();
             $job->assertNotFailed();
             $this->assertNull($ticket->fresh()->reply);

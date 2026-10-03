@@ -41,8 +41,8 @@ class TicketDraftClient
         try {
             $response = $this->draft->prompt($prompt);
         } catch (Throwable $exception) {
-            $this->circuitBreaker->recordFailure($model, $exception);
             $this->record($ticket, AiPromptLogStatus::Failed, $prompt, exception: $exception);
+            $this->circuitBreaker->recordFailureAndThrowIfOpen($model, $exception);
 
             throw $exception;
         }

@@ -29,8 +29,8 @@ class TicketTriageClient
         try {
             $response = $this->triage->prompt($ticket->message);
         } catch (Throwable $exception) {
-            $this->circuitBreaker->recordFailure($model, $exception);
             $this->record($ticket, AiPromptLogStatus::Failed, exception: $exception);
+            $this->circuitBreaker->recordFailureAndThrowIfOpen($model, $exception);
 
             throw $exception;
         }

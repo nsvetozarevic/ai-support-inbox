@@ -19,7 +19,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    command: php artisan queue:work --verbose --sleep=1 --tries=3 --timeout=90
+    command: php artisan queue:work --verbose --sleep=1 --tries=0 --timeout=140
     volumes:
       - .:/var/www/html
     depends_on:

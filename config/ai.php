@@ -23,6 +23,13 @@ return [
     'default_for_reranking' => 'cohere',
 
     /*
+    | How long a triage or draft job may keep waiting, counted from when the ticket
+    | is submitted. After that the worker fails it, so an outage longer than this
+    | needs queue:retry. It also stops a job that keeps killing its worker.
+    */
+    'job_deadline_hours' => 24,
+
+    /*
     | Circuit breaker. Keys are the provider and model strings on the call.
     |
     | Insufficient credits open the provider immediately. A connection blip is retried by
@@ -31,10 +38,14 @@ return [
     | value stays half_open_seconds longer, so a failure then blocks again at once.
     | Jobs parked by a block wait up to release_jitter_seconds extra, so they
     | do not all hit the provider in the same second.
+    | Jobs have no try limit, and waiting on a block does not count. A failed
+    | call that did not block counts; after max_failures the job fails.
+    | Server errors (5xx) count like overloads.
     */
     'circuit_breaker' => [
         'half_open_seconds' => 90,
         'release_jitter_seconds' => 30,
+        'max_failures' => 3,
         'provider' => [
             'connection_failures' => 3,
             'connection_window_seconds' => 60,

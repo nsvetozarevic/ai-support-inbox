@@ -198,6 +198,7 @@ class AiCircuitBreakerTest extends TestCase
             'connection' => [ProviderConnectionException::forProvider(Lab::OpenAI->value), 'ai.circuit_breaker.provider.open_seconds', AiCircuitOpenReason::Connection],
             'rate limit' => [RateLimitedException::forProvider(Lab::OpenAI->value), 'ai.circuit_breaker.model.open_seconds', AiCircuitOpenReason::RateLimit],
             'overloaded' => [ProviderOverloadedException::forProvider(Lab::OpenAI->value), 'ai.circuit_breaker.model.open_seconds', AiCircuitOpenReason::Overloaded],
+            'server error' => [new RequestException(new Response(new PsrResponse(500))), 'ai.circuit_breaker.model.open_seconds', AiCircuitOpenReason::ServerError],
         ];
     }
 
@@ -209,6 +210,7 @@ class AiCircuitBreakerTest extends TestCase
         return [
             'rate limit' => [RateLimitedException::forProvider(Lab::OpenAI->value), AiCircuitOpenReason::RateLimit],
             'overloaded' => [ProviderOverloadedException::forProvider(Lab::OpenAI->value), AiCircuitOpenReason::Overloaded],
+            'server error' => [new RequestException(new Response(new PsrResponse(503))), AiCircuitOpenReason::ServerError],
         ];
     }
 

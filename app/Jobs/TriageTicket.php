@@ -14,10 +14,17 @@ class TriageTicket implements ShouldQueue
 {
     use ManagesAiProvider, Queueable;
 
+    // One 60s model call. Only a backstop: the call's own timeout should fire first.
+    public int $timeout = 90;
+
     public function __construct(public Ticket $ticket) {}
 
     public function handle(TicketTriageClient $client): void
     {
+        if (! $this->ticket->isOpen()) {
+            return;
+        }
+
         $intent = $client->triage($this->ticket);
 
         if ($intent === null) {
