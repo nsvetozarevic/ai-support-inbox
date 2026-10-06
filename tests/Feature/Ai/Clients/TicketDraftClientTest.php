@@ -189,6 +189,86 @@ class TicketDraftClientTest extends TestCase
         }
     }
 
+    public function test_a_failed_embedding_is_logged_and_rethrows(): void
+    {
+        $ticket = Ticket::factory()->create(['message' => 'Amex']);
+
+        Embeddings::fake(fn () => throw RateLimitedException::forProvider(Lab::OpenAI->value));
+        Reranking::fake()->preventStrayRerankings();
+        TicketDraft::fake()->preventStrayPrompts();
+
+        try {
+            $this->client()->draft($ticket);
+            $this->fail('A failed embedding should rethrow.');
+        } catch (RateLimitedException) {
+            $this->assertNull($ticket->fresh()->reply);
+
+            $log = AiPromptLog::query()->sole();
+            $this->assertSame('Amex', $log->input);
+            $this->assertSame(AiPromptLogStatus::Failed, $log->status);
+            $this->assertNull($log->response);
+            $this->assertNotNull($log->error);
+            TicketDraft::assertNeverPrompted();
+        }
+    }
+
+    public function test_a_failed_embedding_that_opens_the_circuit_is_logged(): void
+    {
+        $ticket = Ticket::factory()->create(['message' => 'Amex']);
+
+        Embeddings::fake(fn () => throw RateLimitedException::forProvider(Lab::OpenAI->value));
+        Reranking::fake()->preventStrayRerankings();
+        TicketDraft::fake()->preventStrayPrompts();
+
+        $circuitBreaker = new AiCircuitBreaker;
+
+        foreach (range(1, 2) as $ignored) {
+            $circuitBreaker->recordFailure(
+                AiModel::TextEmbedding3Small,
+                RateLimitedException::forProvider(Lab::OpenAI->value),
+            );
+        }
+
+        try {
+            $this->client()->draft($ticket);
+            $this->fail('A failed embedding should rethrow.');
+        } catch (AiCircuitOpenException $exception) {
+            $this->assertInstanceOf(RateLimitedException::class, $exception->getPrevious());
+
+            $log = AiPromptLog::query()->sole();
+            $this->assertSame('Amex', $log->input);
+            $this->assertSame(AiPromptLogStatus::Failed, $log->status);
+            TicketDraft::assertNeverPrompted();
+        }
+    }
+
+    public function test_an_open_embedding_circuit_is_not_logged_as_a_failed_draft(): void
+    {
+        $ticket = Ticket::factory()->create(['message' => 'Amex']);
+
+        Embeddings::fake()->preventStrayEmbeddings();
+        Reranking::fake()->preventStrayRerankings();
+        TicketDraft::fake()->preventStrayPrompts();
+
+        $circuitBreaker = new AiCircuitBreaker;
+
+        foreach (range(1, 3) as $ignored) {
+            $circuitBreaker->recordFailure(
+                AiModel::TextEmbedding3Small,
+                RateLimitedException::forProvider(Lab::OpenAI->value),
+            );
+        }
+
+        try {
+            $this->client()->draft($ticket);
+            $this->fail('An open embedding circuit should stop the draft.');
+        } catch (AiCircuitOpenException) {
+            $this->assertSame(0, AiPromptLog::query()->count());
+            Embeddings::assertNothingGenerated();
+            TicketDraft::assertNeverPrompted();
+        }
+    }
+
     public function test_an_open_chat_circuit_does_not_prompt_for_a_draft(): void
     {
         $this->storeChunk('payment', 'No Amex. Visa and Mastercard only.', $this->axis(0));

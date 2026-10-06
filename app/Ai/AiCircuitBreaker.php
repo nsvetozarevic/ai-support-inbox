@@ -19,13 +19,13 @@ use Throwable;
 
 class AiCircuitBreaker
 {
-    public function ensureAvailable(AiModel $model): void
+    public function ensureAvailable(AiModel $model, ?Throwable $failure = null): void
     {
         $provider = $model->provider()->value;
         $modelName = $model->value;
 
-        $this->throwIfOpen($provider);
-        $this->throwIfOpen($provider, $modelName);
+        $this->throwIfOpen($provider, previous: $failure);
+        $this->throwIfOpen($provider, $modelName, $failure);
     }
 
     public function recordSuccess(AiModel $model): void
@@ -91,7 +91,7 @@ class AiCircuitBreaker
     public function recordFailureAndThrowIfOpen(AiModel $model, Throwable $exception): void
     {
         $this->recordFailure($model, $exception);
-        $this->ensureAvailable($model);
+        $this->ensureAvailable($model, $exception);
     }
 
     private function isServerError(Throwable $exception): bool
@@ -111,7 +111,7 @@ class AiCircuitBreaker
             && $requestException->response->json('error.type') === 'insufficient_quota';
     }
 
-    private function throwIfOpen(string $provider, ?string $model = null): void
+    private function throwIfOpen(string $provider, ?string $model = null, ?Throwable $previous = null): void
     {
         $key = $model === null
             ? $this->providerKey($provider)
@@ -124,7 +124,7 @@ class AiCircuitBreaker
         }
 
         if ($state->until > now()->getTimestamp()) {
-            throw new AiCircuitOpenException($provider, $model, $state->reason, $state->until);
+            throw new AiCircuitOpenException($provider, $model, $state->reason, $state->until, $previous);
         }
     }
 

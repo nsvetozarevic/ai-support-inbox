@@ -20,9 +20,42 @@ class HandbookRetriever
     public function __construct(private AiCircuitBreaker $circuitBreaker) {}
 
     /**
+     * @return list<float>|null
+     */
+    public function embed(string $query): ?array
+    {
+        if (trim($query) === '') {
+            return null;
+        }
+
+        $aiModel = AiModel::from((string) config('handbook.embeddings.model'));
+        $provider = $aiModel->provider()->value;
+        $model = $aiModel->value;
+
+        $this->circuitBreaker->ensureAvailable($aiModel);
+
+        try {
+            $vector = Embeddings::for([$query])
+                ->dimensions((int) config('handbook.embeddings.dimensions'))
+                ->timeout(30)
+                ->generate($provider, $model)
+                ->first();
+        } catch (Throwable $exception) {
+            $this->circuitBreaker->recordFailureAndThrowIfOpen($aiModel, $exception);
+
+            throw $exception;
+        }
+
+        $this->circuitBreaker->recordSuccess($aiModel);
+
+        return $vector;
+    }
+
+    /**
+     * @param  list<float>  $vector
      * @return Collection<int, HandbookChunk>
      */
-    public function retrieve(string $query): Collection
+    public function retrieve(string $query, array $vector): Collection
     {
         if (trim($query) === '') {
             return collect();
@@ -33,7 +66,7 @@ class HandbookRetriever
         return $this->rerank(
             $this->fuse(
                 $this->lexical($query, $maxChunks),
-                $this->dense($query, $maxChunks),
+                $this->dense($vector, $maxChunks),
                 $maxChunks,
             ),
             $query,
@@ -82,48 +115,21 @@ class HandbookRetriever
     }
 
     /**
+     * @param  list<float>  $vector
      * @return Collection<int, HandbookChunk>
      */
-    private function dense(string $query, int $limit): Collection
+    private function dense(array $vector, int $limit): Collection
     {
         return HandbookChunk::query()
             ->with('handbookDocument')
             ->whereNotNull('embedding')
             ->whereVectorSimilarTo(
                 'embedding',
-                $this->embedQuery($query),
+                $vector,
                 (float) config('handbook.retrieval.vector_min_similarity'),
             )
             ->limit($limit)
             ->get();
-    }
-
-    /**
-     * @return list<float>
-     */
-    private function embedQuery(string $query): array
-    {
-        $aiModel = AiModel::from((string) config('handbook.embeddings.model'));
-        $provider = $aiModel->provider()->value;
-        $model = $aiModel->value;
-
-        $this->circuitBreaker->ensureAvailable($aiModel);
-
-        try {
-            $vector = Embeddings::for([$query])
-                ->dimensions((int) config('handbook.embeddings.dimensions'))
-                ->timeout(30)
-                ->generate($provider, $model)
-                ->first();
-        } catch (Throwable $exception) {
-            $this->circuitBreaker->recordFailureAndThrowIfOpen($aiModel, $exception);
-
-            throw $exception;
-        }
-
-        $this->circuitBreaker->recordSuccess($aiModel);
-
-        return $vector;
     }
 
     /**

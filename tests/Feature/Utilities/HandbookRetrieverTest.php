@@ -11,6 +11,7 @@ use App\Models\HandbookChunk;
 use App\Models\HandbookDocument;
 use App\Utilities\HandbookRetriever;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Exceptions;
 use Laravel\Ai\Embeddings;
 use Laravel\Ai\Enums\Lab;
@@ -35,7 +36,7 @@ class HandbookRetrieverTest extends TestCase
         Embeddings::fake([[$this->axis(0)]]);
         $this->fakeRerankKeepingOrder();
 
-        $chunks = $this->retriever()->retrieve($query);
+        $chunks = $this->search($query);
 
         $this->assertSame($slug, $chunks->first()?->handbookDocument->slug);
         Embeddings::assertGenerated(fn (EmbeddingsPrompt $prompt): bool => $prompt->contains($query));
@@ -49,7 +50,7 @@ class HandbookRetrieverTest extends TestCase
         Embeddings::fake([[$this->axis(0)]]);
         $this->fakeRerankKeepingOrder();
 
-        $chunks = $this->retriever()->retrieve('I want my money back');
+        $chunks = $this->search('I want my money back');
 
         $this->assertSame('returns-and-refunds', $chunks->first()?->handbookDocument->slug);
     }
@@ -62,7 +63,7 @@ class HandbookRetrieverTest extends TestCase
         Embeddings::fake([[$this->axis(0)]]);
         $this->fakeRerankKeepingOrder();
 
-        $chunks = $this->retriever()->retrieve('Amex');
+        $chunks = $this->search('Amex');
 
         $this->assertSame(['payment', 'shipping'], $chunks->pluck('handbookDocument.slug')->all());
     }
@@ -85,7 +86,7 @@ class HandbookRetrieverTest extends TestCase
             ];
         });
 
-        $chunks = $this->retriever()->retrieve('Amex');
+        $chunks = $this->search('Amex');
 
         $this->assertSame(['shipping'], $chunks->pluck('handbookDocument.slug')->all());
         Reranking::assertReranked(fn (RerankingPrompt $prompt): bool => $prompt->limit === 1
@@ -114,7 +115,7 @@ class HandbookRetrieverTest extends TestCase
             ];
         });
 
-        $chunks = $this->retriever()->retrieve('Amex');
+        $chunks = $this->search('Amex');
 
         $this->assertSame([$kept], $chunks->pluck('body')->all());
     }
@@ -126,7 +127,7 @@ class HandbookRetrieverTest extends TestCase
         Embeddings::fake([[$this->axis(0)]]);
         Reranking::fake()->preventStrayRerankings();
 
-        $chunks = $this->retriever()->retrieve('zzzz-not-a-token');
+        $chunks = $this->search('zzzz-not-a-token');
 
         $this->assertTrue($chunks->isEmpty());
         Reranking::assertNothingReranked();
@@ -137,7 +138,7 @@ class HandbookRetrieverTest extends TestCase
         Embeddings::fake()->preventStrayEmbeddings();
         Reranking::fake()->preventStrayRerankings();
 
-        $chunks = $this->retriever()->retrieve('   ');
+        $chunks = $this->search('   ');
 
         $this->assertTrue($chunks->isEmpty());
         Embeddings::assertNothingGenerated();
@@ -159,8 +160,8 @@ class HandbookRetrieverTest extends TestCase
         }
 
         try {
-            $this->retriever()->retrieve('Amex');
-            $this->fail('An open embedding circuit should stop retrieval.');
+            $this->search('Amex');
+            $this->fail('An open embedding circuit should stop the embedding.');
         } catch (AiCircuitOpenException) {
             Embeddings::assertNothingGenerated();
             Reranking::assertNothingReranked();
@@ -186,7 +187,7 @@ class HandbookRetrieverTest extends TestCase
             );
         }
 
-        $chunks = $this->retriever()->retrieve('Amex');
+        $chunks = $this->search('Amex');
 
         $this->assertSame(['payment'], $chunks->pluck('handbookDocument.slug')->all());
         Reranking::assertNothingReranked();
@@ -203,7 +204,7 @@ class HandbookRetrieverTest extends TestCase
         Reranking::fake(fn () => throw RateLimitedException::forProvider(Lab::Cohere->value));
         Exceptions::fake();
 
-        $chunks = $this->retriever()->retrieve('Amex');
+        $chunks = $this->search('Amex');
 
         $this->assertSame(['payment'], $chunks->pluck('handbookDocument.slug')->all());
         Exceptions::assertReported(RateLimitedException::class);
@@ -264,6 +265,17 @@ class HandbookRetrieverTest extends TestCase
 
             return $ranked;
         });
+    }
+
+    /**
+     * @return Collection<int, HandbookChunk>
+     */
+    private function search(string $query): Collection
+    {
+        $retriever = $this->retriever();
+        $vector = $retriever->embed($query) ?? [];
+
+        return $retriever->retrieve($query, $vector);
     }
 
     private function retriever(): HandbookRetriever
