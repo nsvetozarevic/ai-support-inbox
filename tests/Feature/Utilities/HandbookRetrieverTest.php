@@ -94,6 +94,31 @@ class HandbookRetrieverTest extends TestCase
             && $prompt->documentsContain('No Amex'));
     }
 
+    public function test_a_reranked_chunk_under_the_relevance_cutoff_is_left_out(): void
+    {
+        config(['handbook.retrieval.rerank_min_relevance' => 0.4]);
+
+        $this->storeChunk('payment', 'No Amex. Visa and Mastercard only.', $this->axis(0));
+        $this->storeChunk('shipping', 'Royal Mail from Newcastle in three to five days.', $this->axis(0));
+
+        Embeddings::fake([[$this->axis(0)]]);
+
+        $kept = null;
+
+        Reranking::fake(function (RerankingPrompt $prompt) use (&$kept): array {
+            $kept = $prompt->documents[0];
+
+            return [
+                new RankedDocument(index: 0, document: $prompt->documents[0], score: 0.4),
+                new RankedDocument(index: 1, document: $prompt->documents[1], score: 0.39),
+            ];
+        });
+
+        $chunks = $this->retriever()->retrieve('Amex');
+
+        $this->assertSame([$kept], $chunks->pluck('body')->all());
+    }
+
     public function test_a_query_with_no_handbook_matches_does_not_rerank(): void
     {
         $this->storeChunk('shipping', 'Royal Mail from Newcastle in three to five days.', $this->axis(1));

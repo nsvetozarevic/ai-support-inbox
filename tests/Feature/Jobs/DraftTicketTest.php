@@ -8,6 +8,7 @@ use App\Ai\Agents\TicketDraft;
 use App\Ai\AiCircuitBreaker;
 use App\Ai\Clients\TicketDraftClient;
 use App\Enums\AiModel;
+use App\Enums\TicketStatus;
 use App\Exceptions\AiCircuitOpenException;
 use App\Jobs\DraftTicket;
 use App\Models\HandbookChunk;
@@ -47,7 +48,71 @@ class DraftTicketTest extends TestCase
 
         $this->runThroughMiddleware($job);
 
-        $this->assertSame('We do not take Amex.', $ticket->fresh()->reply);
+        $ticket->refresh();
+
+        $this->assertSame('We do not take Amex.', $ticket->reply);
+        $this->assertSame(['No Amex. Visa and Mastercard only.'], $ticket->reply_quotes);
+        $job->assertNotReleased();
+        $job->assertNotFailed();
+    }
+
+    public function test_a_reply_written_while_the_draft_runs_is_left_alone(): void
+    {
+        $this->storeChunk('payment', 'No Amex. Visa and Mastercard only.', $this->axis(0));
+        $ticket = Ticket::factory()->create(['message' => 'Amex']);
+
+        Embeddings::fake([[$this->axis(0)]]);
+        $this->fakeRerankKeepingOrder();
+        TicketDraft::fake(function () use ($ticket): array {
+            Ticket::query()->whereKey($ticket->id)->update([
+                'reply' => 'Staff already wrote this.',
+            ]);
+
+            return [
+                'reply' => 'We do not take Amex.',
+                'quotes' => ['No Amex. Visa and Mastercard only.'],
+            ];
+        })->preventStrayPrompts();
+
+        $job = (new DraftTicket($ticket))->withFakeQueueInteractions();
+
+        $this->runThroughMiddleware($job);
+
+        $ticket->refresh();
+
+        $this->assertSame('Staff already wrote this.', $ticket->reply);
+        $this->assertNull($ticket->reply_quotes);
+        $job->assertNotReleased();
+        $job->assertNotFailed();
+    }
+
+    public function test_a_ticket_discarded_while_the_draft_runs_is_left_alone(): void
+    {
+        $this->storeChunk('payment', 'No Amex. Visa and Mastercard only.', $this->axis(0));
+        $ticket = Ticket::factory()->create(['message' => 'Amex']);
+
+        Embeddings::fake([[$this->axis(0)]]);
+        $this->fakeRerankKeepingOrder();
+        TicketDraft::fake(function () use ($ticket): array {
+            Ticket::query()->whereKey($ticket->id)->update([
+                'status' => TicketStatus::Discarded,
+            ]);
+
+            return [
+                'reply' => 'We do not take Amex.',
+                'quotes' => ['No Amex. Visa and Mastercard only.'],
+            ];
+        })->preventStrayPrompts();
+
+        $job = (new DraftTicket($ticket))->withFakeQueueInteractions();
+
+        $this->runThroughMiddleware($job);
+
+        $ticket->refresh();
+
+        $this->assertSame(TicketStatus::Discarded, $ticket->status);
+        $this->assertNull($ticket->reply);
+        $this->assertNull($ticket->reply_quotes);
         $job->assertNotReleased();
         $job->assertNotFailed();
     }

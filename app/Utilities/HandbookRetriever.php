@@ -11,6 +11,8 @@ use App\Models\HandbookChunk;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
 use Laravel\Ai\Embeddings;
+use Laravel\Ai\Reranking;
+use Laravel\Ai\Responses\Data\RankedDocument;
 use Throwable;
 
 class HandbookRetriever
@@ -90,7 +92,7 @@ class HandbookRetriever
             ->whereVectorSimilarTo(
                 'embedding',
                 $this->embedQuery($query),
-                (float) config('handbook.retrieval.min_similarity'),
+                (float) config('handbook.retrieval.vector_min_similarity'),
             )
             ->limit($limit)
             ->get();
@@ -176,10 +178,14 @@ class HandbookRetriever
         $provider = $aiModel->provider()->value;
         $model = $aiModel->value;
 
+        $chunks = $chunks->values();
+
         try {
             $this->circuitBreaker->ensureAvailable($aiModel);
 
-            $reranked = $chunks->rerank('body', $query, $limit, $provider, $model)->values();
+            $response = Reranking::of($chunks->map(fn (HandbookChunk $chunk): string => $chunk->body)->all())
+                ->limit($limit)
+                ->rerank($query, $provider, $model);
         } catch (AiCircuitOpenException) {
             return $chunks->take($limit)->values();
         } catch (Throwable $exception) {
@@ -191,6 +197,11 @@ class HandbookRetriever
 
         $this->circuitBreaker->recordSuccess($aiModel);
 
-        return $reranked;
+        $minimum = (float) config('handbook.retrieval.rerank_min_relevance');
+
+        return collect($response->results)
+            ->filter(fn (RankedDocument $result): bool => $result->score >= $minimum)
+            ->map(fn (RankedDocument $result): HandbookChunk => $chunks[$result->index])
+            ->values();
     }
 }

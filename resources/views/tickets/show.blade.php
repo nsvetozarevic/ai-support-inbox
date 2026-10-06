@@ -17,6 +17,10 @@
     </p>
     <p class="mt-6 text-sm whitespace-pre-wrap">{{ $ticket->message }}</p>
 
+    @php
+        $draftedReply = (string) $ticket->reply;
+    @endphp
+
     @if ($ticket->isOpen())
         <form method="POST" action="{{ route(\App\Routing\WebRoute::SendTicket, $ticket) }}" class="mt-8 space-y-4">
             @csrf
@@ -31,9 +35,18 @@
                 @error('reply')
                     <p class="mt-1 text-sm text-red-700">{{ $message }}</p>
                 @enderror
+                @if ($draftNotice)
+                    <p class="mt-1 text-sm text-zinc-600">{{ $draftNotice }}</p>
+                @endif
             </div>
             @if ($ticket->reply_quotes)
-                <div class="rounded-md border border-zinc-200 bg-white px-4 py-3">
+                <div
+                    id="reply-quotes"
+                    data-draft='@json($draftedReply)'
+                    data-stale="{{ (string) old('reply', $ticket->reply) !== $draftedReply ? '1' : '0' }}"
+                    @if ((string) old('reply', $ticket->reply) !== $draftedReply) hidden @endif
+                    class="rounded-md border border-zinc-200 bg-white px-4 py-3"
+                >
                     <p class="text-xs font-medium uppercase tracking-wide text-zinc-500">From the handbook</p>
                     <ul class="mt-2 space-y-2">
                         @foreach ($ticket->reply_quotes as $quote)
@@ -41,6 +54,20 @@
                         @endforeach
                     </ul>
                 </div>
+                <script>
+                    {
+                        const reply = document.getElementById('reply');
+                        const quotes = document.getElementById('reply-quotes');
+                        const drafted = JSON.parse(quotes.dataset.draft);
+
+                        const sync = () => {
+                            quotes.hidden = reply.value !== drafted;
+                        };
+
+                        reply.addEventListener('input', sync);
+                        sync();
+                    }
+                </script>
             @endif
             <div class="flex gap-3">
                 <button type="submit" class="rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white">

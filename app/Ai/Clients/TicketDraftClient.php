@@ -63,21 +63,7 @@ class TicketDraftClient
 
         $this->record($ticket, AiPromptLogStatus::Accepted, $prompt, $groundedDraft->toArray(), $response->usage);
 
-        $this->suggestReply($ticket, $groundedDraft);
-
         return $groundedDraft;
-    }
-
-    private function suggestReply(Ticket $ticket, TicketDraftData $draft): void
-    {
-        if (trim((string) $ticket->reply) !== '') {
-            return;
-        }
-
-        $ticket->update([
-            'reply' => $draft->reply,
-            'reply_quotes' => $draft->quotes,
-        ]);
     }
 
     /**
@@ -99,6 +85,12 @@ class TicketDraftClient
      */
     private function ground(Ticket $ticket, string $prompt, TicketDraftData $draft, Collection $chunks, Usage $usage): ?TicketDraftData
     {
+        if ($draft->quotes === []) {
+            $this->record($ticket, AiPromptLogStatus::NotCovered, $prompt, $draft->toArray(), $usage);
+
+            return null;
+        }
+
         if (! $this->quotesAppearInChunks($draft, $chunks)) {
             $this->record($ticket, AiPromptLogStatus::Invalid, $prompt, $draft->toArray(), $usage);
 

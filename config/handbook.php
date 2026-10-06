@@ -26,12 +26,19 @@ return [
     /*
     | max_chunks caps word search, vector search, and the merge.
     | rerank_limit is how many of those chunks go to the draft later.
+    |
+    | rerank_min_relevance drops a Cohere score below this. Scores run from 0 to 1 and
+    | depend on the question. 0.1 is deliberately low, so a useful chunk is kept
+    | until this is measured. Measure it with real data: take representative
+    | customer questions, pair each with the weakest chunk that should still
+    | reach the draft, rerank those pairs, and use their average score here.
     */
     'retrieval' => [
         'max_chunks' => 20,
         'rerank_limit' => 8,
         'rrf_k' => 60,
-        'min_similarity' => 0.6,
+        'vector_min_similarity' => 0.6,
+        'rerank_min_relevance' => 0.1,
     ],
 
     /*

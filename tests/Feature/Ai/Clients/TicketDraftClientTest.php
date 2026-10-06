@@ -30,7 +30,7 @@ class TicketDraftClientTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_a_matching_chunk_is_logged_and_suggests_a_reply(): void
+    public function test_a_matching_chunk_is_logged_and_returned(): void
     {
         $this->storeChunk('payment', 'No Amex. Visa and Mastercard only.', $this->axis(0));
         $ticket = Ticket::factory()->create(['message' => 'Amex']);
@@ -49,8 +49,7 @@ class TicketDraftClientTest extends TestCase
         $this->assertInstanceOf(TicketDraftData::class, $draft);
         $this->assertSame('We do not take Amex.', $draft->reply);
         $this->assertSame(['No Amex. Visa and Mastercard only.'], $draft->quotes);
-        $this->assertSame('We do not take Amex.', $ticket->fresh()->reply);
-        $this->assertSame(['No Amex. Visa and Mastercard only.'], $ticket->fresh()->reply_quotes);
+        $this->assertNull($ticket->fresh()->reply);
 
         TicketDraft::assertPrompted(fn (AgentPrompt $prompt): bool => $prompt->contains('Amex')
             && $prompt->contains('No Amex. Visa and Mastercard only.'));
@@ -64,31 +63,6 @@ class TicketDraftClientTest extends TestCase
             'reply' => 'We do not take Amex.',
             'quotes' => ['No Amex. Visa and Mastercard only.'],
         ], $log->response);
-    }
-
-    public function test_a_grounded_draft_does_not_replace_an_existing_reply(): void
-    {
-        $this->storeChunk('payment', 'No Amex. Visa and Mastercard only.', $this->axis(0));
-        $ticket = Ticket::factory()->create([
-            'message' => 'Amex',
-            'reply' => 'Staff already wrote this.',
-        ]);
-
-        Embeddings::fake([[$this->axis(0)]]);
-        $this->fakeRerankKeepingOrder();
-        TicketDraft::fake([
-            [
-                'reply' => 'We do not take Amex.',
-                'quotes' => ['No Amex. Visa and Mastercard only.'],
-            ],
-        ])->preventStrayPrompts();
-
-        $draft = $this->client()->draft($ticket);
-
-        $this->assertInstanceOf(TicketDraftData::class, $draft);
-        $this->assertSame('Staff already wrote this.', $ticket->fresh()->reply);
-        $this->assertNull($ticket->fresh()->reply_quotes);
-        $this->assertSame(AiPromptLogStatus::Accepted, AiPromptLog::query()->sole()->status);
     }
 
     public function test_a_ticket_with_no_handbook_matches_does_not_prompt(): void
@@ -163,7 +137,7 @@ class TicketDraftClientTest extends TestCase
         ], $log->response);
     }
 
-    public function test_a_draft_without_quotes_is_not_accepted(): void
+    public function test_a_draft_without_quotes_is_logged_as_not_covered(): void
     {
         $this->storeChunk('payment', 'No Amex. Visa and Mastercard only.', $this->axis(0));
         $ticket = Ticket::factory()->create(['message' => 'Amex']);
@@ -183,7 +157,7 @@ class TicketDraftClientTest extends TestCase
         $this->assertNull($ticket->fresh()->reply);
 
         $log = AiPromptLog::query()->sole();
-        $this->assertSame(AiPromptLogStatus::Invalid, $log->status);
+        $this->assertSame(AiPromptLogStatus::NotCovered, $log->status);
         $this->assertSame([
             'reply' => 'Yes, we accept Amex on every order.',
             'quotes' => [],

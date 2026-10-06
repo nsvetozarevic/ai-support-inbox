@@ -11,13 +11,24 @@ use Illuminate\Support\Facades\Mail;
 
 class SendTicket
 {
-    public function handle(Ticket $ticket, string $reply): void
+    public function handle(Ticket $ticket, string $userReply): void
     {
-        $ticket->update([
-            'reply' => $reply,
-            'status' => TicketStatus::Sent,
-        ]);
+        if ($userReply === $ticket->reply) {
+            $replyQuotes = $ticket->reply_quotes;
+            $reply = $ticket->reply;
+        } else {
+            $replyQuotes = null;
+            $reply = $userReply;
+        }
+
+        $ticket->reply = $reply;
 
         Mail::to($ticket->email)->send(new TicketReplyMail($ticket));
+
+        $ticket->update([
+            'reply' => $reply,
+            'reply_quotes' => $replyQuotes,
+            'status' => TicketStatus::Sent,
+        ]);
     }
 }

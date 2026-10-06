@@ -29,8 +29,8 @@ class TicketDraft implements Agent, HasStructuredOutput
         return <<<'TXT'
         You draft a reply for Northshore Supply staff.
         Use only the handbook excerpts in the user message.
-        Copy supporting sentences from those excerpts into quotes.
-        If the excerpts do not answer the customer, leave quotes empty and say the handbook does not cover it.
+        If the excerpts answer the customer, copy the supporting sentences into quotes.
+        If they do not, leave quotes empty and say the handbook does not cover it.
         Do not invent shop policy.
         TXT;
     }
