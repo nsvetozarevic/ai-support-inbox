@@ -91,7 +91,7 @@ class TicketDraftClient
         try {
             return TicketDraftData::from($payload);
         } catch (InvalidTicketDraftException) {
-            $this->record($ticket, AiPromptLogStatus::Invalid, $prompt, $payload, $usage);
+            $this->record($ticket, AiPromptLogStatus::Malformed, $prompt, $payload, $usage);
 
             return null;
         }

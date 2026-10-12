@@ -32,6 +32,7 @@ class ShowTicketController extends Controller
 
         return match ($draft?->status) {
             AiPromptLogStatus::NotCovered => "The handbook doesn't cover this. Write the reply yourself.",
+            AiPromptLogStatus::Malformed => 'The draft was rejected because it was badly formed.',
             AiPromptLogStatus::Invalid => 'The draft was rejected because its quotes were not in the handbook.',
             AiPromptLogStatus::Failed => 'The last draft attempt failed.',
             default => null,

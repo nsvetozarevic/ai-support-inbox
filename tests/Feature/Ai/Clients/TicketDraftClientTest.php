@@ -103,7 +103,7 @@ class TicketDraftClientTest extends TestCase
 
         $log = AiPromptLog::query()->sole();
         $this->assertStringContainsString('No Amex. Visa and Mastercard only.', $log->input);
-        $this->assertSame(AiPromptLogStatus::Invalid, $log->status);
+        $this->assertSame(AiPromptLogStatus::Malformed, $log->status);
         $this->assertSame([
             'reply' => 'We do not take Amex.',
             'quotes' => [12],

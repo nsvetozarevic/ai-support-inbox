@@ -111,7 +111,8 @@ class ShowTicketControllerTest extends TestCase
     {
         return [
             'not covered' => [AiPromptLogStatus::NotCovered, "The handbook doesn't cover this. Write the reply yourself."],
-            'invalid' => [AiPromptLogStatus::Invalid, 'The draft was rejected because its quotes were not in the handbook.'],
+            'badly formed' => [AiPromptLogStatus::Malformed, 'The draft was rejected because it was badly formed.'],
+            'quotes not in the handbook' => [AiPromptLogStatus::Invalid, 'The draft was rejected because its quotes were not in the handbook.'],
             'failed' => [AiPromptLogStatus::Failed, 'The last draft attempt failed.'],
         ];
     }
@@ -151,6 +152,7 @@ class ShowTicketControllerTest extends TestCase
         ]);
 
         $this->get(route(WebRoute::ShowTicket, $ticket))
+            ->assertDontSee('The draft was rejected because it was badly formed.')
             ->assertDontSee('The draft was rejected because its quotes were not in the handbook.');
     }
 
