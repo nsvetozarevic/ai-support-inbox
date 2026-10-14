@@ -46,10 +46,6 @@ class TicketDraftClient
             throw $exception;
         }
 
-        if ($ticketMessageVector === null) {
-            return null;
-        }
-
         $chunks = $this->retriever->retrieve($ticket->message, $ticketMessageVector);
 
         if ($chunks->isEmpty()) {

@@ -18,6 +18,7 @@ return new class extends Migration
             $table->string('key')->unique();
             $table->unsignedInteger('position');
             $table->text('body');
+            $table->string('body_hash', 64)->index();
             $table->string('embedding_model')->nullable();
             $table->unsignedSmallInteger('embedding_dimensions')->nullable();
             $table->vector('embedding', dimensions: 1536)->nullable()->index();

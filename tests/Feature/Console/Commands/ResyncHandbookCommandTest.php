@@ -57,6 +57,7 @@ class ResyncHandbookCommandTest extends TestCase
         foreach ($chunks as $chunk) {
             $this->assertSame($document->slug.':'.$chunk->position, $chunk->key);
             $this->assertNotSame('stale', $chunk->body);
+            $this->assertSame(hash('sha256', $chunk->body), $chunk->body_hash);
             $this->assertIsArray($chunk->embedding);
             $this->assertCount(1536, $chunk->embedding);
             $this->assertSame(AiModel::TextEmbedding3Small->value, $chunk->embedding_model);
@@ -176,6 +177,98 @@ class ResyncHandbookCommandTest extends TestCase
 
         $this->assertSame('Unchanged', $document->title);
         $this->assertSame('Still here', $document->body);
+        $this->assertDatabaseCount('handbook_documents', 1);
+    }
+
+    public function test_resync_does_not_embed_a_chunk_whose_text_already_matches_the_model(): void
+    {
+        config(['handbook.catalog' => $this->catalogPath([
+            [
+                'title' => 'Old title',
+                'slug' => 'returns',
+                'body' => 'Fourteen days.',
+            ],
+        ])]);
+
+        Embeddings::fake();
+
+        $this->artisan('handbook:resync')->assertSuccessful();
+
+        config(['handbook.catalog' => $this->catalogPath([
+            [
+                'title' => 'New title',
+                'slug' => 'returns',
+                'body' => 'Fourteen days.',
+            ],
+        ])]);
+
+        $calls = 0;
+
+        Embeddings::fake(function () use (&$calls): null {
+            $calls++;
+
+            return null;
+        });
+
+        $this->artisan('handbook:resync')->assertSuccessful();
+
+        $this->assertSame(0, $calls);
+
+        $document = HandbookDocument::query()->where('slug', 'returns')->sole();
+
+        $this->assertSame('New title', $document->title);
+        $this->assertSame(1536, count($document->chunks()->sole()->embedding));
+    }
+
+    public function test_resync_leaves_the_database_unchanged_when_a_later_batch_fails(): void
+    {
+        $document = HandbookDocument::factory()->create([
+            'slug' => 'kept-policy',
+            'title' => 'Unchanged',
+            'body' => 'Still here',
+        ]);
+
+        config([
+            'handbook.catalog' => $this->catalogPath([
+                [
+                    'title' => 'First',
+                    'slug' => 'first',
+                    'body' => 'First policy text.',
+                ],
+                [
+                    'title' => 'Second',
+                    'slug' => 'second',
+                    'body' => 'Second policy text.',
+                ],
+            ]),
+            'handbook.embeddings.batch_size' => 1,
+            'handbook.embeddings.concurrency' => 2,
+        ]);
+
+        $calls = 0;
+
+        Embeddings::fake(function () use (&$calls): null {
+            $calls++;
+
+            if ($calls === 2) {
+                throw RateLimitedException::forProvider(Lab::OpenAI->value);
+            }
+
+            return null;
+        });
+
+        try {
+            $this->artisan('handbook:resync');
+            $this->fail('A failed batch should stop the resync.');
+        } catch (RateLimitedException) {
+            $this->assertSame(2, $calls);
+        }
+
+        $document->refresh();
+
+        $this->assertSame('Unchanged', $document->title);
+        $this->assertSame('Still here', $document->body);
+        $this->assertFalse(HandbookDocument::query()->where('slug', 'first')->exists());
         $this->assertDatabaseCount('handbook_documents', 1);
     }
 

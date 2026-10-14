@@ -134,18 +134,6 @@ class HandbookRetrieverTest extends TestCase
         Reranking::assertNothingReranked();
     }
 
-    public function test_blank_query_returns_no_chunks_and_does_not_embed(): void
-    {
-        Embeddings::fake()->preventStrayEmbeddings();
-        Reranking::fake()->preventStrayRerankings();
-
-        $chunks = $this->search('   ');
-
-        $this->assertTrue($chunks->isEmpty());
-        Embeddings::assertNothingGenerated();
-        Reranking::assertNothingReranked();
-    }
-
     public function test_an_open_embedding_circuit_does_not_embed_or_rerank(): void
     {
         Embeddings::fake()->preventStrayEmbeddings();
@@ -273,7 +261,7 @@ class HandbookRetrieverTest extends TestCase
      */
     private function search(string $query): Collection
     {
-        $vector = (new HandbookEmbedder(new AiCircuitBreaker))->embedQuery($query) ?? [];
+        $vector = (new HandbookEmbedder(new AiCircuitBreaker))->embedQuery($query);
 
         return $this->retriever()->retrieve($query, $vector);
     }

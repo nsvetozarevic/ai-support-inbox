@@ -9,11 +9,17 @@ return [
     'catalog' => database_path('assets/handbook-documents.php'),
 
     /*
-    | Must match the handbook_chunks.embedding vector column.
+    | dimensions must match the handbook_chunks.embedding vector column.
+    | batch_size is how many chunks go in one embeddings request.
+    | concurrency is how many of those requests run at once.
+    | The circuit breaker opens after 3 rate-limit failures in 60 seconds,
+    | so 3 is the most to have in flight.
     */
     'embeddings' => [
         'model' => AiModel::TextEmbedding3Small->value,
         'dimensions' => 1536,
+        'batch_size' => 128,
+        'concurrency' => 3,
     ],
 
     /*

@@ -11,7 +11,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-#[Fillable(['handbook_document_id', 'key', 'position', 'body', 'embedding', 'embedding_model', 'embedding_dimensions'])]
+#[Fillable(['handbook_document_id', 'key', 'position', 'body', 'body_hash', 'embedding', 'embedding_model', 'embedding_dimensions'])]
 class HandbookChunk extends Model
 {
     /** @use HasFactory<HandbookChunkFactory> */

@@ -6,6 +6,7 @@ namespace App\Utilities;
 
 use App\Ai\AiCircuitBreaker;
 use App\Enums\AiModel;
+use Illuminate\Support\Facades\Concurrency;
 use Laravel\Ai\Embeddings;
 use Laravel\Ai\Exceptions\EmbeddingsCountMismatchException;
 use Laravel\Ai\Responses\EmbeddingsResponse;
@@ -16,17 +17,55 @@ class HandbookEmbedder
     public function __construct(private AiCircuitBreaker $circuitBreaker) {}
 
     /**
-     * @return list<float>|null
+     * @return list<float>
      */
-    public function embedQuery(string $text): ?array
+    public function embedQuery(string $text): array
     {
         return $this->generate([$text], 30)->first();
     }
 
     /**
+     * One embeddings request for every batch, with a limited number in flight.
+     * The returned vectors are in the same order as $texts.
+     *
+     * @param  list<string>  $texts
+     * @return list<list<float>>
+     */
+    public function embedAll(array $texts): array
+    {
+        if ($texts === []) {
+            return [];
+        }
+
+        $batches = array_chunk($texts, max(1, (int) config('handbook.embeddings.batch_size')));
+        $waves = array_chunk($batches, max(1, (int) config('handbook.embeddings.concurrency')));
+        $vectors = [];
+
+        foreach ($waves as $wave) {
+            $tasks = [];
+
+            foreach ($wave as $batch) {
+                $tasks[] = function () use ($batch): array {
+                    return app(self::class)->embedChunks($batch)->embeddings;
+                };
+            }
+
+            foreach (Concurrency::run($tasks) as $embeddings) {
+                array_push($vectors, ...$embeddings);
+            }
+        }
+
+        if (count($vectors) !== count($texts)) {
+            throw new EmbeddingsCountMismatchException(count($texts), count($vectors));
+        }
+
+        return $vectors;
+    }
+
+    /**
      * @param  list<string>  $texts
      */
-    public function embedChunks(array $texts): EmbeddingsResponse
+    private function embedChunks(array $texts): EmbeddingsResponse
     {
         return $this->generate($texts, 60);
     }
