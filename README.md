@@ -72,6 +72,7 @@ Cohere reranks the merged list. A chunk scoring under 0.1 is left out. If Cohere
 | [`app/Jobs/Middleware/RetryAiProvider.php`](app/Jobs/Middleware/RetryAiProvider.php) | Waiting versus counted failures, backoff |
 | [`app/Jobs/Concerns/ManagesAiProvider.php`](app/Jobs/Concerns/ManagesAiProvider.php) | `$tries`, `$maxExceptions`, and the 24-hour deadline |
 | [`app/Ai/Clients/TicketDraftClient.php`](app/Ai/Clients/TicketDraftClient.php) | Embed, retrieve, prompt, validate, ground, log |
+| [`app/Utilities/HandbookEmbedder.php`](app/Utilities/HandbookEmbedder.php) | Embedding calls for a draft query and for handbook chunks |
 | [`app/Utilities/HandbookRetriever.php`](app/Utilities/HandbookRetriever.php) | Full-text, vectors, RRF, rerank with fallback |
 | [`app/Jobs/DraftTicket.php`](app/Jobs/DraftTicket.php) | Conditional write that respects staff edits |
 | [`app/Actions/SendTicket.php`](app/Actions/SendTicket.php) | Claim the ticket once, mail outside any transaction, restore on failure |

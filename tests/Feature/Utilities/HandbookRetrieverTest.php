@@ -9,6 +9,7 @@ use App\Enums\AiModel;
 use App\Exceptions\AiCircuitOpenException;
 use App\Models\HandbookChunk;
 use App\Models\HandbookDocument;
+use App\Utilities\HandbookEmbedder;
 use App\Utilities\HandbookRetriever;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Collection;
@@ -272,10 +273,9 @@ class HandbookRetrieverTest extends TestCase
      */
     private function search(string $query): Collection
     {
-        $retriever = $this->retriever();
-        $vector = $retriever->embed($query) ?? [];
+        $vector = (new HandbookEmbedder(new AiCircuitBreaker))->embedQuery($query) ?? [];
 
-        return $retriever->retrieve($query, $vector);
+        return $this->retriever()->retrieve($query, $vector);
     }
 
     private function retriever(): HandbookRetriever

@@ -4,23 +4,18 @@ declare(strict_types=1);
 
 namespace App\Actions;
 
-use App\Ai\AiCircuitBreaker;
-use App\Enums\AiModel;
 use App\Models\HandbookDocument;
 use App\Utilities\DocumentLoader;
 use App\Utilities\HandbookChunker;
+use App\Utilities\HandbookEmbedder;
 use Illuminate\Support\Facades\DB;
-use Laravel\Ai\Embeddings;
-use Laravel\Ai\Exceptions\EmbeddingsCountMismatchException;
-use Laravel\Ai\Responses\EmbeddingsResponse;
-use Throwable;
 
 class ResyncHandbook
 {
     public function __construct(
         private DocumentLoader $loader,
         private HandbookChunker $chunker,
-        private AiCircuitBreaker $circuitBreaker,
+        private HandbookEmbedder $embedder,
     ) {}
 
     public function handle(): void
@@ -42,7 +37,7 @@ class ResyncHandbook
             }
         }
 
-        $embeddings = $bodies === [] ? null : $this->embed($bodies);
+        $embeddings = $bodies === [] ? null : $this->embedder->embedChunks($bodies);
 
         DB::transaction(function () use ($documents, $embeddings): void {
             $offset = 0;
@@ -76,37 +71,6 @@ class ResyncHandbook
 
             $this->deleteMissingDocuments($slugs);
         });
-    }
-
-    /**
-     * @param  list<string>  $bodies
-     */
-    private function embed(array $bodies): EmbeddingsResponse
-    {
-        $aiModel = AiModel::from((string) config('handbook.embeddings.model'));
-        $provider = $aiModel->provider()->value;
-        $model = $aiModel->value;
-
-        $this->circuitBreaker->ensureAvailable($aiModel);
-
-        try {
-            $response = Embeddings::for($bodies)
-                ->dimensions((int) config('handbook.embeddings.dimensions'))
-                ->timeout(60)
-                ->generate($provider, $model);
-        } catch (Throwable $exception) {
-            $this->circuitBreaker->recordFailure($aiModel, $exception);
-
-            throw $exception;
-        }
-
-        $this->circuitBreaker->recordSuccess($aiModel);
-
-        if (count($response->embeddings) !== count($bodies)) {
-            throw new EmbeddingsCountMismatchException(count($bodies), count($response->embeddings));
-        }
-
-        return $response;
     }
 
     /**

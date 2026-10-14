@@ -14,6 +14,7 @@ use App\Jobs\DraftTicket;
 use App\Models\HandbookChunk;
 use App\Models\HandbookDocument;
 use App\Models\Ticket;
+use App\Utilities\HandbookEmbedder;
 use App\Utilities\HandbookRetriever;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Ai\Embeddings;
@@ -202,7 +203,7 @@ class DraftTicketTest extends TestCase
     {
         $circuitBreaker = new AiCircuitBreaker;
 
-        return new TicketDraftClient(new TicketDraft, new HandbookRetriever($circuitBreaker), $circuitBreaker);
+        return new TicketDraftClient(new TicketDraft, new HandbookEmbedder($circuitBreaker), new HandbookRetriever($circuitBreaker), $circuitBreaker);
     }
 
     /**

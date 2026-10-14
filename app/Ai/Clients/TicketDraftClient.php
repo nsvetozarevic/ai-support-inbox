@@ -13,6 +13,7 @@ use App\Exceptions\AiCircuitOpenException;
 use App\Exceptions\InvalidTicketDraftException;
 use App\Models\HandbookChunk;
 use App\Models\Ticket;
+use App\Utilities\HandbookEmbedder;
 use App\Utilities\HandbookRetriever;
 use Illuminate\Support\Collection;
 use Laravel\Ai\Responses\Data\Usage;
@@ -22,6 +23,7 @@ class TicketDraftClient
 {
     public function __construct(
         private TicketDraft $draft,
+        private HandbookEmbedder $embedder,
         private HandbookRetriever $retriever,
         private AiCircuitBreaker $circuitBreaker,
     ) {}
@@ -29,22 +31,26 @@ class TicketDraftClient
     public function draft(Ticket $ticket): ?TicketDraftData
     {
         try {
-            $vector = $this->retriever->embed($ticket->message);
-        } catch (AiCircuitOpenException $exception) {
-            $this->logEmbeddingFailure($ticket, $exception);
-
-            throw $exception;
+            $ticketMessageVector = $this->embedder->embedQuery($ticket->message);
         } catch (Throwable $exception) {
+            if ($exception instanceof AiCircuitOpenException) {
+                // Already blocked. This is a wait, so it is not logged as a failed embedding.
+                throw $exception;
+            }
+
             $this->record($ticket, AiPromptLogStatus::Failed, $ticket->message, exception: $exception);
+
+            // Check if this exception opened the circuit breaker. If so, throw AiCircuitOpenException again, and keep the initial exception in the trace
+            $this->embedder->ensureAvailable($exception);
 
             throw $exception;
         }
 
-        if ($vector === null) {
+        if ($ticketMessageVector === null) {
             return null;
         }
 
-        $chunks = $this->retriever->retrieve($ticket->message, $vector);
+        $chunks = $this->retriever->retrieve($ticket->message, $ticketMessageVector);
 
         if ($chunks->isEmpty()) {
             return null;
@@ -56,7 +62,11 @@ class TicketDraftClient
         $this->circuitBreaker->ensureAvailable($model);
 
         try {
-            $response = $this->draft->prompt($prompt);
+            $response = $this->draft->prompt(
+                $prompt,
+                provider: $model->provider(),
+                model: $model->value,
+            );
         } catch (Throwable $exception) {
             $this->record($ticket, AiPromptLogStatus::Failed, $prompt, exception: $exception);
             $this->circuitBreaker->recordFailureAndThrowIfOpen($model, $exception);
@@ -161,21 +171,6 @@ class TicketDraftClient
             PHP_EOL,
             $excerpts,
         );
-    }
-
-    /**
-     * An already open circuit is a wait, so it is not logged. A failure that
-     * opens the circuit still carries the embedding error as its previous exception.
-     */
-    private function logEmbeddingFailure(Ticket $ticket, AiCircuitOpenException $exception): void
-    {
-        $failure = $exception->getPrevious();
-
-        if ($failure === null) {
-            return;
-        }
-
-        $this->record($ticket, AiPromptLogStatus::Failed, $ticket->message, exception: $failure);
     }
 
     /**

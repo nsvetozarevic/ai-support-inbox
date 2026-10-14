@@ -15,6 +15,7 @@ use App\Models\AiPromptLog;
 use App\Models\HandbookChunk;
 use App\Models\HandbookDocument;
 use App\Models\Ticket;
+use App\Utilities\HandbookEmbedder;
 use App\Utilities\HandbookRetriever;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Ai\Embeddings;
@@ -52,7 +53,9 @@ class TicketDraftClientTest extends TestCase
         $this->assertNull($ticket->fresh()->reply);
 
         TicketDraft::assertPrompted(fn (AgentPrompt $prompt): bool => $prompt->contains('Amex')
-            && $prompt->contains('No Amex. Visa and Mastercard only.'));
+            && $prompt->contains('No Amex. Visa and Mastercard only.')
+            && $prompt->model === AiModel::Gpt4oMini->value
+            && $prompt->provider()->driver() === Lab::OpenAI->value);
 
         $log = AiPromptLog::query()->sole();
         $this->assertSame(TicketDraft::class, $log->agent);
@@ -302,7 +305,7 @@ class TicketDraftClientTest extends TestCase
     {
         $circuitBreaker = new AiCircuitBreaker;
 
-        return new TicketDraftClient(new TicketDraft, new HandbookRetriever($circuitBreaker), $circuitBreaker);
+        return new TicketDraftClient(new TicketDraft, new HandbookEmbedder($circuitBreaker), new HandbookRetriever($circuitBreaker), $circuitBreaker);
     }
 
     /**

@@ -4,21 +4,15 @@ declare(strict_types=1);
 
 namespace App\Ai\Agents;
 
-use App\Enums\AiModel;
 use App\Enums\TicketIntent;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
-use Laravel\Ai\Attributes\Model;
-use Laravel\Ai\Attributes\Provider;
 use Laravel\Ai\Attributes\Temperature;
 use Laravel\Ai\Attributes\Timeout;
 use Laravel\Ai\Contracts\Agent;
 use Laravel\Ai\Contracts\HasStructuredOutput;
-use Laravel\Ai\Enums\Lab;
 use Laravel\Ai\Promptable;
 use Stringable;
 
-#[Provider(Lab::OpenAI)]
-#[Model(AiModel::Gpt4oMini->value)]
 #[Temperature(0)]
 #[Timeout(60)]
 class TicketTriage implements Agent, HasStructuredOutput
@@ -38,7 +32,7 @@ class TicketTriage implements Agent, HasStructuredOutput
     /**
      * @return array<string, mixed>
      */
-    public function schema(JsonSchema $schema): array
+    public function schema(JsonSchema $schema): array§
     {
         return [
             'intent' => $schema->string()->enum(

@@ -21,8 +21,6 @@ class SendTicket
      */
     public function handle(Ticket $ticket, string $userReply): void
     {
-        $ticket = Ticket::query()->findOrFail($ticket->id);
-
         if (! $ticket->isOpen()) {
             return;
         }

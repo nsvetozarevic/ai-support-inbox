@@ -10,7 +10,6 @@ use App\Exceptions\AiCircuitOpenException;
 use App\Models\HandbookChunk;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
-use Laravel\Ai\Embeddings;
 use Laravel\Ai\Reranking;
 use Laravel\Ai\Responses\Data\RankedDocument;
 use Throwable;
@@ -18,38 +17,6 @@ use Throwable;
 class HandbookRetriever
 {
     public function __construct(private AiCircuitBreaker $circuitBreaker) {}
-
-    /**
-     * @return list<float>|null
-     */
-    public function embed(string $query): ?array
-    {
-        if (trim($query) === '') {
-            return null;
-        }
-
-        $aiModel = AiModel::from((string) config('handbook.embeddings.model'));
-        $provider = $aiModel->provider()->value;
-        $model = $aiModel->value;
-
-        $this->circuitBreaker->ensureAvailable($aiModel);
-
-        try {
-            $vector = Embeddings::for([$query])
-                ->dimensions((int) config('handbook.embeddings.dimensions'))
-                ->timeout(30)
-                ->generate($provider, $model)
-                ->first();
-        } catch (Throwable $exception) {
-            $this->circuitBreaker->recordFailureAndThrowIfOpen($aiModel, $exception);
-
-            throw $exception;
-        }
-
-        $this->circuitBreaker->recordSuccess($aiModel);
-
-        return $vector;
-    }
 
     /**
      * @param  list<float>  $vector

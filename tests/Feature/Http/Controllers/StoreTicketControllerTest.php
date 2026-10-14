@@ -6,6 +6,7 @@ namespace Tests\Feature\Http\Controllers;
 
 use App\Ai\Agents\TicketDraft;
 use App\Ai\Agents\TicketTriage;
+use App\Enums\AiModel;
 use App\Enums\AiPromptLogStatus;
 use App\Enums\TicketIntent;
 use App\Enums\TicketStatus;
@@ -18,6 +19,8 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\RateLimiter;
 use Laravel\Ai\Embeddings;
+use Laravel\Ai\Enums\Lab;
+use Laravel\Ai\Prompts\AgentPrompt;
 use Laravel\Ai\Prompts\EmbeddingsPrompt;
 use Laravel\Ai\Reranking;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -48,7 +51,9 @@ class StoreTicketControllerTest extends TestCase
         $this->assertSame('Where is my order #1001?', $ticket->message);
         $this->assertSame(TicketStatus::New, $ticket->status);
         $this->assertSame(TicketIntent::Shipping, $ticket->intent);
-        TicketTriage::assertPrompted('Where is my order #1001?');
+        TicketTriage::assertPrompted(fn (AgentPrompt $prompt): bool => $prompt->contains('Where is my order #1001?')
+            && $prompt->model === AiModel::Gpt4oMini->value
+            && $prompt->provider()->driver() === Lab::OpenAI->value);
 
         $log = AiPromptLog::query()->sole();
         $this->assertSame(TicketTriage::class, $log->agent);
