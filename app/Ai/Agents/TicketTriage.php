@@ -32,7 +32,7 @@ class TicketTriage implements Agent, HasStructuredOutput
     /**
      * @return array<string, mixed>
      */
-    public function schema(JsonSchema $schema): array§
+    public function schema(JsonSchema $schema): array
     {
         return [
             'intent' => $schema->string()->enum(
