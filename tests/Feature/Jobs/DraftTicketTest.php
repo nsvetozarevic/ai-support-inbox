@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Jobs;
 
+use App\Actions\DraftTicketReply;
 use App\Ai\Agents\TicketDraft;
 use App\Ai\AiCircuitBreaker;
 use App\Ai\Clients\TicketDraftClient;
@@ -196,14 +197,20 @@ class DraftTicketTest extends TestCase
 
     private function runThroughMiddleware(DraftTicket $job): void
     {
-        $job->middleware()[0]->handle($job, fn () => $job->handle($this->client()));
+        $job->middleware()[0]->handle($job, fn () => $job->handle($this->action()));
     }
 
-    private function client(): TicketDraftClient
+    private function action(): DraftTicketReply
     {
         $circuitBreaker = new AiCircuitBreaker;
+        $draftAgent = new TicketDraft;
 
-        return new TicketDraftClient(new TicketDraft, new HandbookEmbedder($circuitBreaker), new HandbookRetriever($circuitBreaker), $circuitBreaker);
+        return new DraftTicketReply(
+            $draftAgent,
+            new HandbookEmbedder($circuitBreaker),
+            new HandbookRetriever($circuitBreaker),
+            new TicketDraftClient($draftAgent, $circuitBreaker),
+        );
     }
 
     /**

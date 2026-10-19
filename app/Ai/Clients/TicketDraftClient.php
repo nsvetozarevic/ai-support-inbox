@@ -9,12 +9,9 @@ use App\Ai\AiCircuitBreaker;
 use App\Data\TicketDraftData;
 use App\Enums\AiModel;
 use App\Enums\AiPromptLogStatus;
-use App\Exceptions\AiCircuitOpenException;
 use App\Exceptions\InvalidTicketDraftException;
 use App\Models\HandbookChunk;
 use App\Models\Ticket;
-use App\Utilities\HandbookEmbedder;
-use App\Utilities\HandbookRetriever;
 use Illuminate\Support\Collection;
 use Laravel\Ai\Responses\Data\Usage;
 use Throwable;
@@ -23,35 +20,14 @@ class TicketDraftClient
 {
     public function __construct(
         private TicketDraft $draft,
-        private HandbookEmbedder $embedder,
-        private HandbookRetriever $retriever,
         private AiCircuitBreaker $circuitBreaker,
     ) {}
 
-    public function draft(Ticket $ticket): ?TicketDraftData
+    /**
+     * @param  Collection<int, HandbookChunk>  $chunks
+     */
+    public function draft(Ticket $ticket, Collection $chunks): ?TicketDraftData
     {
-        try {
-            $ticketMessageVector = $this->embedder->embedQuery($ticket->message);
-        } catch (Throwable $exception) {
-            if ($exception instanceof AiCircuitOpenException) {
-                // Already blocked. This is a wait, so it is not logged as a failed embedding.
-                throw $exception;
-            }
-
-            $this->record($ticket, AiPromptLogStatus::Failed, $ticket->message, exception: $exception);
-
-            // Check if this exception opened the circuit breaker. If so, throw AiCircuitOpenException again, and keep the initial exception in the trace
-            $this->embedder->ensureAvailable($exception);
-
-            throw $exception;
-        }
-
-        $chunks = $this->retriever->retrieve($ticket->message, $ticketMessageVector);
-
-        if ($chunks->isEmpty()) {
-            return null;
-        }
-
         $prompt = $this->promptFor($ticket, $chunks);
         $model = AiModel::Gpt4oMini;
 

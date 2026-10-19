@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Jobs;
 
-use App\Ai\Clients\TicketDraftClient;
+use App\Actions\DraftTicketReply;
 use App\Data\TicketDraftData;
 use App\Enums\TicketStatus;
 use App\Jobs\Concerns\ManagesAiProvider;
@@ -23,13 +23,13 @@ class DraftTicket implements ShouldQueue
 
     public function __construct(public Ticket $ticket) {}
 
-    public function handle(TicketDraftClient $client): void
+    public function handle(DraftTicketReply $draftTicketReply): void
     {
         if (! $this->ticket->isOpen()) {
             return;
         }
 
-        $draft = $client->draft($this->ticket);
+        $draft = $draftTicketReply->handle($this->ticket);
 
         if ($draft === null) {
             return;
