@@ -11,6 +11,7 @@ return [
     /*
     | dimensions must match the handbook_chunks.embedding vector column.
     | batch_size is how many chunks go in one embeddings request.
+    | 360 chunks is about 108,000 tokens, under the 300,000 token request cap.
     | concurrency is how many of those requests run at once.
     | The circuit breaker opens after 3 rate-limit failures in 60 seconds,
     | so 3 is the most to have in flight.
@@ -18,7 +19,7 @@ return [
     'embeddings' => [
         'model' => AiModel::TextEmbedding3Small->value,
         'dimensions' => 1536,
-        'batch_size' => 128,
+        'batch_size' => 360,
         'concurrency' => 3,
     ],
 

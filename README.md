@@ -43,7 +43,7 @@ A failed call that does not block the provider counts, and the job fails after t
 
 Cutting at sentence ends keeps most sentences inside one chunk. Grounding needs that, because each quote must appear word for word in a single chunk.
 
-A chunk that already has a vector for this model is kept. The rest are embedded in batches of 128, with up to 3 batches at once. Nothing is written until every batch has succeeded, so a failed batch leaves the stored handbook unchanged. Documents removed from the catalog are deleted.
+A chunk that already has a vector for this model is kept. The rest are embedded in batches of 360, with up to 3 batches at once. Nothing is written until every batch has succeeded, so a failed batch leaves the stored handbook unchanged. Documents removed from the catalog are deleted.
 
 ### Retrieval
 
